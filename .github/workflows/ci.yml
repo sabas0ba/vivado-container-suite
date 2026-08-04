@@ -1,0 +1,141 @@
+name: ci
+
+# Every action is pinned to a commit SHA; scripts/verify-pinning.sh fails the
+# build if one is not.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VCS_LOG_LEVEL: info
+
+jobs:
+  lint:
+    name: lint and unit tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Fetch pinned tooling
+        run: ./scripts/fetch-tools.sh
+
+      - name: Verify supply-chain pinning
+        run: ./scripts/verify-pinning.sh
+
+      - name: shellcheck
+        run: make shellcheck
+
+      - name: hadolint
+        run: make hadolint
+
+      - name: Tcl syntax
+        run: ./scripts/tcl-syntax.sh
+
+      - name: Unit tests
+        run: make test
+
+  image:
+    name: image build and availability
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Build the base image
+        run: ./bin/vcs build --progress plain
+
+      # The runner has no Vivado installation, so the stages that need one skip
+      # themselves.  Everything else -- entrypoint, privilege drop, file
+      # ownership, the shared-library closure, the headless X server -- is
+      # exercised for real.
+      - name: Availability selftest (no Vivado)
+        env:
+          VCS_VIVADO_MODE: none
+          VCS_DISPLAY_MODE: xvfb
+          VCS_JTAG_MODE: none
+          VCS_LICENSE: none
+        run: ./bin/vcs -C examples/blinky selftest
+
+      - name: Tcl syntax inside the image
+        run: ./scripts/tcl-syntax.sh
+
+      - name: The image ships no license material
+        run: |
+          set -euo pipefail
+          img="$(./bin/vcs image)"
+          if docker run --rm --entrypoint sh "$img" -c \
+               'find / -xdev -name "*.lic" -print 2>/dev/null | head -1' | grep -q .; then
+            echo "the image contains a .lic file" >&2
+            exit 1
+          fi
+          echo "clean"
+
+      - name: The image runs as a non-root user by default
+        env:
+          VCS_VIVADO_MODE: none
+        run: |
+          set -euo pipefail
+          out="$(./bin/vcs -C examples/blinky shell id -u)"
+          echo "container uid: $out"
+          test "$out" = "$(id -u)"
+
+      - name: Report the image size
+        run: docker image ls "$(./bin/vcs image)"
+
+  hardware:
+    name: hardware-in-the-loop
+    # Opt-in: a self-hosted runner labelled `vivado` with a real installation,
+    # a license and a JTAG cable.  Skipped everywhere else.
+    if: ${{ github.repository_owner != '' && vars.VCS_HW_RUNNER == 'true' }}
+    runs-on: [self-hosted, vivado]
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Build the base image
+        run: ./bin/vcs build
+
+      - name: Environment report
+        run: ./bin/vcs doctor --deep || true
+
+      - name: Full selftest
+        env:
+          VCS_LICENSE: ${{ vars.VCS_LICENSE }}
+          VCS_XILINX_ROOT: ${{ vars.VCS_XILINX_ROOT }}
+          VCS_JTAG_MODE: host
+        run: ./bin/vcs -C examples/blinky selftest
+
+      - name: End-to-end flow on the example design
+        env:
+          VCS_LICENSE: ${{ vars.VCS_LICENSE }}
+          VCS_XILINX_ROOT: ${{ vars.VCS_XILINX_ROOT }}
+        run: |
+          ./bin/vcs -C examples/blinky sim
+          ./bin/vcs -C examples/blinky flow
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: blinky-reports
+          path: |
+            examples/blinky/build/reports/
+            examples/blinky/build/logs/
+          if-no-files-found: ignore
+
+  lock-drift:
+    name: lock files are current
+    runs-on: ubuntu-24.04
+    # Informational: upstream snapshots and tags move, and that should show up
+    # as a reviewable diff rather than breaking every pull request.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - name: Re-resolve the lock files
+        run: make lock-check

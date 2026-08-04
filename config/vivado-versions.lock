@@ -1,0 +1,20 @@
+# Vivado installers, pinned by SHA256.
+#
+# Format:  <version>|<installer filename>|<sha256>
+#
+# `vcs build --installer <file>` refuses to build unless the file's SHA256
+# appears here, and docker/install-vivado.sh checks it again inside the build.
+# Nothing in this repository downloads an installer for you: AMD requires a
+# logged-in session and acceptance of their EULA, so you fetch it yourself from
+# https://www.amd.com/en/support/downloads/ and record the digest here.
+#
+# Add an entry with:
+#     sha256sum FPGAs_AdaptiveSoCs_Unified_SDI_2025.2_*.tar
+#
+# The commented lines below are placeholders showing the expected shape.  They
+# are NOT real digests -- replace them with the ones you compute locally, or
+# `vcs build --installer` will (correctly) refuse to proceed.
+#
+# 2025.2|FPGAs_AdaptiveSoCs_Unified_SDI_2025.2_1030_1755.tar|<sha256>
+# 2025.1|FPGAs_AdaptiveSoCs_Unified_2025.1_0530_0145.tar|<sha256>
+# 2024.2|FPGAs_AdaptiveSoCs_Unified_2024.2_1113_1001.tar|<sha256>

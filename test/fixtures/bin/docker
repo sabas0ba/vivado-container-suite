@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Fake container engine for the test suite.
+#
+# Records its argv, one argument per line, in $VCS_TEST_ARGV so tests can assert
+# on the exact command the CLI assembled.  Behaviour is steered by:
+#   VCS_TEST_ENGINE_BROKEN=1   `info` fails (engine installed but unusable)
+#   VCS_TEST_IMAGE_MISSING=1   `image inspect` fails
+#   VCS_TEST_RUN_STATUS=N      `run` exits with N
+#   VCS_TEST_RUN_STDOUT=text   `run` prints text
+set -uo pipefail
+
+if [ -n "${VCS_TEST_ARGV:-}" ]; then
+  printf '%s\n' "$@" >>"$VCS_TEST_ARGV"
+fi
+
+case "${1:-}" in
+  info)
+    [ "${VCS_TEST_ENGINE_BROKEN:-0}" = "1" ] && exit 1
+    echo "fake engine"
+    exit 0 ;;
+  image)
+    if [ "${2:-}" = "inspect" ]; then
+      [ "${VCS_TEST_IMAGE_MISSING:-0}" = "1" ] && exit 1
+      echo '[{"Id":"sha256:deadbeef"}]'
+      exit 0
+    fi
+    exit 0 ;;
+  run)
+    [ -n "${VCS_TEST_RUN_STDOUT:-}" ] && printf '%s\n' "$VCS_TEST_RUN_STDOUT"
+    exit "${VCS_TEST_RUN_STATUS:-0}" ;;
+  build|pull|tag|push)
+    exit "${VCS_TEST_RUN_STATUS:-0}" ;;
+  *)
+    exit 0 ;;
+esac

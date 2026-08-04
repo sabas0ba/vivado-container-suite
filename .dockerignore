@@ -1,0 +1,14 @@
+# Keep the build context small and, more importantly, keep anything sensitive
+# out of it: the Dockerfile fails the build if a .lic lands in the image, and
+# this is the first line of that defence.
+.git/
+.tools/
+**/build/
+**/*.lic
+**/vcs.local.conf
+**/.Xil/
+**/xsim.dir/
+docs/
+examples/
+test/
+*.md

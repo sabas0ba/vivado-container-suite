@@ -1,0 +1,16 @@
+# Development / CI tooling, pinned.
+#
+# Two record types:
+#   bin|<name>|<url>|<sha256>          a single executable, verified then chmod +x
+#   tar|<name>|<url>|<sha256>|<strip>  a tarball, verified then extracted
+#   git|<name>|<repo-url>|<commit>     a git checkout pinned to a commit object
+#
+# Git commit IDs are content-addressed, so a commit pin is as strong as a
+# checksum -- and stronger than a release tarball, whose bytes are regenerated
+# by the forge.
+
+bin|hadolint|https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64|56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010
+tar|shellcheck|https://github.com/koalaman/shellcheck/releases/download/v0.10.0/shellcheck-v0.10.0.linux.x86_64.tar.xz|6c881ab0698e4e6ea235245f22832860544f17ba386442fe7e9d629f8cbedf87|1
+git|bats-core|https://github.com/bats-core/bats-core.git|b640ec3cf2c7c9cfc9e6351479261186f76eeec8
+git|bats-support|https://github.com/bats-core/bats-support.git|24a72e14349690bcbf7c151b9d2d1cdd32d36eb1
+git|bats-assert|https://github.com/bats-core/bats-assert.git|78fa631d1370562d2cd4a1390989e706158e7bf0

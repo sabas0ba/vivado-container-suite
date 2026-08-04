@@ -1,0 +1,6 @@
+# Container images this project depends on, as <key>|<image:tag>.
+#
+# Tags here are documentation only.  scripts/lock-images.sh resolves each one
+# to a registry digest in config/images.lock, and that digest is what actually
+# gets built against / pulled.  Nothing in this repo ever runs an unpinned tag.
+base|ubuntu:24.04

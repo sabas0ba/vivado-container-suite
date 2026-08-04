@@ -1,0 +1,13 @@
+# DL3006 -- FROM ${BASE_IMAGE}: the ARG default is a digest, and
+#           scripts/verify-pinning.sh enforces that on every push.
+# SC1091  -- the apt snapshot lock is COPYd into the image a few lines above,
+#           so hadolint's static view cannot see it.
+# SC3040  -- the `vivado` stage inherits `SHELL ["/bin/bash", ...]` from `base`;
+#           hadolint re-checks each stage as POSIX sh.
+ignored:
+  - DL3006
+  - SC1091
+  - SC3040
+
+trustedRegistries:
+  - docker.io
