@@ -32,7 +32,11 @@ H
   if [ "$bind" = "0.0.0.0" ]; then
     log_warn "publishing hw_server on all interfaces; anyone who can reach port $port can reprogram the device"
   fi
-  VCS_EXTRA_RUN_ARGS="$VCS_EXTRA_RUN_ARGS --publish ${bind}:${port}:${port}"
+  if [ "$VCS_NETWORK" = "host" ]; then
+    log_warn "host networking is in effect; hw_server listens on the host's port $port directly"
+  else
+    VCS_EXTRA_RUN_ARGS="$VCS_EXTRA_RUN_ARGS --publish ${bind}:${port}:${port}"
+  fi
 
   log_info "hw_server on ${bind}:${port} -- connect with: vcs --jtag remote:<host>:${port} program"
   log_info "cables: $(jtag_usb_describe)"

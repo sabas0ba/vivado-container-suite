@@ -5,6 +5,9 @@ cmd_gui() {
   local target=""
   while [ $# -gt 0 ]; do
     case "$1" in
+      --vnc)       VCS_VNC=1; shift ;;
+      --vnc-port)  VCS_VNC_PORT="${2:?--vnc-port needs a number}"; VCS_VNC=1; shift 2 ;;
+      --vnc-bind)  VCS_VNC_BIND="${2:?--vnc-bind needs an address}"; VCS_VNC=1; shift 2 ;;
       -h|--help)
         cat <<'H'
 vcs gui [XPR|DCP]
@@ -15,9 +18,18 @@ vcs gui [XPR|DCP]
 
   Display transport is chosen by --display / VCS_DISPLAY_MODE:
     auto     X11 if DISPLAY is set, else headless Xvfb  (default)
-    x11      X socket + a per-run untrusted xauth cookie
+    x11      X socket, or an ssh-forwarded TCP display, plus a per-run
+             untrusted xauth cookie
     wayland  through the compositor's XWayland socket
-    xvfb     headless; pair with a VNC/X client of your own
+    xvfb     headless X server inside the container
+
+  --vnc              Export the headless display over VNC.  Implies --display
+                     xvfb.  A one-off password is generated and printed unless
+                     VCS_VNC_PASSWORD is set; it reaches the container through a
+                     mounted file, never an environment variable or an argv.
+  --vnc-port N       Host port to publish (default 5901)
+  --vnc-bind ADDR    Address to publish on (default 127.0.0.1 -- loopback only)
+
 See docs/06-gui-and-tcl.md.
 H
         return 0 ;;
@@ -26,6 +38,16 @@ H
   done
 
   [ -z "$target" ] && target="$VCS_XPR"
+  export VCS_VNC VCS_VNC_PORT VCS_VNC_BIND
+
+  # VNC exports a headless server, so it selects the display mode itself.
+  if [ "$VCS_VNC" -eq 1 ] && [ "$VCS_DISPLAY_MODE" != "xvfb" ]; then
+    case "$VCS_DISPLAY_MODE" in
+      auto|none) ;;
+      *) log_warn "--vnc overrides --display $VCS_DISPLAY_MODE with xvfb" ;;
+    esac
+    VCS_DISPLAY_MODE=xvfb
+  fi
 
   local mode; mode="$(display_effective_mode)"
   if [ "$mode" = "none" ]; then

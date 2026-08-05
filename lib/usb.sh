@@ -23,7 +23,13 @@ jtag_parse_mode() { # -> "kind<TAB>host<TAB>port"
     none)
       printf 'none\t\t' ;;
     host)
-      printf 'remote\t%s\t%s' "$(engine_host_gateway_name)" "$VCS_HW_SERVER_PORT" ;;
+      # Under host networking the container shares the host's loopback, so the
+      # gateway alias would miss an hw_server bound to 127.0.0.1.
+      if [ "${VCS_NETWORK:-}" = "host" ]; then
+        printf 'remote\tlocalhost\t%s' "$VCS_HW_SERVER_PORT"
+      else
+        printf 'remote\t%s\t%s' "$(engine_host_gateway_name)" "$VCS_HW_SERVER_PORT"
+      fi ;;
     usb)
       printf 'usb\tlocalhost\t%s' "$VCS_HW_SERVER_PORT" ;;
     remote:*)

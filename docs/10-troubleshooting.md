@@ -58,7 +58,10 @@ sudo chown -R "$(id -u):$(id -g)" build/
 | 症状 | 対処 |
 |---|---|
 | `no display available` | `--display x11` (X 転送) か `--display xvfb` (ヘッドレス) |
-| `DISPLAY is unset` | X セッション外から起動している。`--display xvfb` |
+| `DISPLAY is unset` | X セッション外から起動している。`vcs gui --vnc` を使う |
+| `ssh -X` したのに GUI が出ない | `vcs` が TCP ディスプレイを検出して `--network host` を付ける。`VCS_NETWORK` を別値に設定していると競合する (警告が出る) |
+| VNC に繋がらない | ポートは既定で 127.0.0.1 のみ。別マシンからは `ssh -L 5901:127.0.0.1:5901` |
+| VNC のパスワードが分からない | `vcs gui --vnc` が起動時に表示する。固定したいなら `VCS_VNC_PASSWORD` |
 | ウィンドウが出ない / `cannot connect to X server` | `xhost +SI:localuser:$(id -un)`。ホストに `xauth` を入れる |
 | Wayland で動かない | XWayland が必要。`echo $DISPLAY` が空なら XWayland が無い |
 | 描画が極端に遅い | 既定はソフトウェアレンダリング。`--gpu` を試す |

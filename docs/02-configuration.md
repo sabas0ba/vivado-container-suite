@@ -113,6 +113,10 @@ VCS_SOURCES="rtl/*.v rtl/sub/*.v"
 | キー | 既定 | 意味 |
 |---|---|---|
 | `VCS_DISPLAY_MODE` | `auto` | `auto` \| `x11` \| `wayland` \| `xvfb` \| `none`。`--display` |
+| `VCS_VNC` | `0` | ヘッドレス表示を VNC で公開。`vcs gui --vnc` |
+| `VCS_VNC_PORT` | `5901` | ホスト側の公開ポート |
+| `VCS_VNC_BIND` | `127.0.0.1` | 公開アドレス。`0.0.0.0` は要注意 |
+| `VCS_VNC_PASSWORD` | なし | 未設定なら 1 回限りのものを生成。`vcs info` では伏せ字になる |
 | `VCS_JTAG_MODE` | `host` | `host` \| `usb` \| `remote:HOST[:PORT]` \| `none`。`--jtag` |
 | `VCS_HW_SERVER_PORT` | `3121` | `hw_server` のポート |
 

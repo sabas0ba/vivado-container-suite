@@ -100,6 +100,30 @@ if [ "${VCS_DISPLAY_MODE:-none}" = "xvfb" ]; then
     sleep 0.1
   done
   [ -e "/tmp/.X11-unix/X${display_num}" ] || fail "Xvfb failed to start on :${display_num}"
+
+  # Export the headless display so a machine with no X server of its own can
+  # still show the GUI.  The password comes from a mounted file, never from the
+  # environment or the command line, both of which are readable by anyone who
+  # can inspect the container.
+  if [ "${VCS_VNC:-0}" = "1" ]; then
+    command -v x11vnc >/dev/null 2>&1 ||
+      fail "VCS_VNC=1 but x11vnc is not in the image; rebuild with 'vcs build'"
+    [ -s /opt/vcs/vnc-password ] ||
+      fail "VCS_VNC=1 but /opt/vcs/vnc-password is missing or empty"
+    dbg "starting x11vnc on $DISPLAY"
+    x11vnc -display "$DISPLAY" \
+           -rfbport 5900 \
+           -passwdfile /opt/vcs/vnc-password \
+           -forever -shared -noxdamage -quiet >/dev/null 2>&1 &
+    _shutdown_pids+=("$!")
+    for _ in $(seq 1 100); do
+      if (exec 3<>/dev/tcp/127.0.0.1/5900) 2>/dev/null; then break; fi
+      sleep 0.1
+    done
+    (exec 3<>/dev/tcp/127.0.0.1/5900) 2>/dev/null ||
+      fail "x11vnc did not come up on port 5900"
+    log "VNC ready on container port 5900"
+  fi
 fi
 
 if [ "${VCS_START_HW_SERVER:-0}" = "1" ] && [ "${1:-}" != "hw_server" ]; then

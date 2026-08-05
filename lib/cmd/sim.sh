@@ -6,6 +6,8 @@ cmd_sim() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --gui)      gui=1; shift ;;
+      --vnc)      gui=1; VCS_VNC=1; VCS_DISPLAY_MODE=xvfb
+                  export VCS_VNC VCS_DISPLAY_MODE; shift ;;
       --no-waves) waves=0; shift ;;
       --top)      sim_top="${2:?--top needs a module}"; shift 2 ;;
       --time)     runtime="${2:?--time needs a value, e.g. 200ns}"; shift 2 ;;
@@ -14,6 +16,7 @@ cmd_sim() {
 vcs sim [options]
 
   --gui         Open the xsim waveform viewer instead of running headless
+  --vnc         As --gui, but export the viewer over VNC (see `vcs gui --help`)
   --top MOD     Testbench top module (default: VCS_SIM_TOP)
   --time T      Simulation length, e.g. 500ns (default: VCS_SIM_TIME, else run -all)
   --no-waves    Do not record a waveform database

@@ -115,8 +115,13 @@ derive_config() {
 
 # config_dump -- human readable summary (used by `vcs info` and `vcs doctor`).
 config_dump() {
-  local key
+  local key value
   while read -r key; do
-    printf '%-24s %s\n' "$key" "${!key}"
+    value="${!key}"
+    # Never echo a secret just because someone asked for the configuration.
+    case "$key" in
+      *PASSWORD*|*SECRET*|*TOKEN*) [ -n "$value" ] && value='<set, not shown>' ;;
+    esac
+    printf '%-28s %s\n' "$key" "$value"
   done <<<"$(_vcs_known_keys)"
 }

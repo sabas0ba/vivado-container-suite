@@ -61,6 +61,8 @@ mount_rw() { printf -- '--volume\n%s:%s:rw%s\n' "$1" "$2" "$(engine_volume_suffi
 
 # engine_host_gateway_args -- how the container reaches a service on the host.
 engine_host_gateway_args() {
+  # Host networking already puts the container on the host's stack.
+  [ "${VCS_NETWORK:-}" = "host" ] && return 0
   if [ "$VCS_ENGINE_KIND" = "docker" ]; then
     printf -- '--add-host\nhost.docker.internal:host-gateway\n'
     printf -- '--add-host\nhost.containers.internal:host-gateway\n'

@@ -91,3 +91,116 @@ teardown() { teardown_project; }
   [ "$status" -ne 0 ]
   [[ "$output" == *"outside the project root"* ]]
 }
+
+
+# --- transport classification ----------------------------------------------
+
+@test "a socket DISPLAY mounts the X socket and leaves networking alone" {
+  mkdir -p /tmp/.X11-unix
+  DISPLAY=:0 VCS_DISPLAY_MODE=x11 run vcs --dry-run gui
+  [ "$status" -eq 0 ]
+  assert_arg_pair "$output" --volume "/tmp/.X11-unix:/tmp/.X11-unix:ro"
+  refute_output_contains "$output" "--network host"
+}
+
+@test "an ssh-forwarded TCP DISPLAY switches to host networking" {
+  # `ssh -X` leaves sshd listening on the host's 127.0.0.1, which a bridged
+  # container cannot reach.
+  DISPLAY=localhost:10.0 VCS_DISPLAY_MODE=x11 run vcs --dry-run gui
+  [ "$status" -eq 0 ]
+  assert_arg_pair "$output" --network host
+  assert_arg_pair "$output" --env DISPLAY=localhost:10.0
+  refute_output_contains "$output" "/tmp/.X11-unix"
+}
+
+@test "an IPv4 loopback DISPLAY is treated the same way" {
+  DISPLAY=127.0.0.1:10.0 VCS_DISPLAY_MODE=x11 run vcs --dry-run gui
+  [ "$status" -eq 0 ]
+  assert_arg_pair "$output" --network host
+}
+
+@test "a remote X server needs no special networking" {
+  DISPLAY=10.20.30.40:0 VCS_DISPLAY_MODE=x11 run vcs --dry-run gui
+  [ "$status" -eq 0 ]
+  assert_arg_pair "$output" --env DISPLAY=10.20.30.40:0
+  refute_output_contains "$output" "--network host"
+  refute_output_contains "$output" "/tmp/.X11-unix"
+}
+
+@test "host networking makes hw_server reachable on loopback, not the gateway" {
+  DISPLAY=localhost:10.0 VCS_DISPLAY_MODE=x11 VCS_JTAG_MODE=host \
+    run vcs --dry-run gui
+  [ "$status" -eq 0 ]
+  assert_arg_pair "$output" --env "VCS_HW_SERVER_URL=TCP:localhost:3121"
+  refute_output_contains "$output" "host-gateway"
+}
+
+@test "an explicit conflicting VCS_NETWORK is reported, not silently overridden" {
+  DISPLAY=localhost:10.0 VCS_DISPLAY_MODE=x11 VCS_NETWORK=bridge \
+    run vcs --dry-run gui
+  [[ "$output" == *"needs host networking"* ]]
+  assert_arg_pair "$output" --network bridge
+}
+
+# --- VNC --------------------------------------------------------------------
+
+@test "--vnc publishes on loopback and selects a headless display" {
+  run vcs --dry-run gui --vnc
+  [ "$status" -eq 0 ]
+  assert_arg_pair "$output" --env VCS_DISPLAY_MODE=xvfb
+  assert_arg_pair "$output" --env VCS_VNC=1
+  assert_arg_pair "$output" --publish "127.0.0.1:5901:5900"
+}
+
+@test "--vnc generates a password and delivers it through a mounted file" {
+  run vcs --dry-run gui --vnc
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"password: "* ]]
+  [[ "$output" == *":/opt/vcs/vnc-password:ro"* ]]
+  # The secret must never travel as an environment variable or an argument.
+  refute_output_contains "$output" "VCS_VNC_PASSWORD="
+}
+
+@test "a caller-supplied VNC password is used and not printed" {
+  VCS_VNC_PASSWORD=hunter2 run vcs --dry-run gui --vnc
+  [ "$status" -eq 0 ]
+  refute_output_contains "$output" "hunter2"
+  [[ "$output" == *"from VCS_VNC_PASSWORD"* ]]
+}
+
+@test "info --all does not print the VNC password" {
+  VCS_VNC_PASSWORD=hunter2 run vcs info --all
+  [ "$status" -eq 0 ]
+  refute_output_contains "$output" "hunter2"
+  [[ "$output" == *"<set, not shown>"* ]]
+}
+
+@test "--vnc-port and --vnc-bind are honoured" {
+  run vcs --dry-run gui --vnc-port 5999 --vnc-bind 0.0.0.0
+  [ "$status" -eq 0 ]
+  assert_arg_pair "$output" --publish "0.0.0.0:5999:5900"
+  [[ "$output" == *"anyone who can reach port"* ]]
+}
+
+@test "the VNC password file is removed when the command exits" {
+  before="$(ls /tmp/vcs-vnc.* 2>/dev/null | wc -l)"
+  run vcs --dry-run gui --vnc
+  [ "$status" -eq 0 ]
+  after="$(ls /tmp/vcs-vnc.* 2>/dev/null | wc -l)"
+  [ "$before" -eq "$after" ]
+}
+
+@test "sim --vnc implies a headless GUI" {
+  run vcs --dry-run sim --vnc
+  [ "$status" -eq 0 ]
+  assert_arg_pair "$output" --env VCS_VNC=1
+  assert_arg_pair "$output" --env VCS_DISPLAY_MODE=xvfb
+}
+
+@test "the image can actually serve VNC" {
+  grep -qx 'x11vnc' "$VCS_REPO_ROOT/docker/packages.list"
+  grep -q '^x11vnc=' "$VCS_REPO_ROOT/docker/packages.lock"
+  grep -q 'passwdfile' "$VCS_REPO_ROOT/docker/entrypoint.sh"
+  # x11vnc must never be started without authentication.
+  ! grep -q 'nopw' "$VCS_REPO_ROOT/docker/entrypoint.sh"
+}
