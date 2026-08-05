@@ -70,10 +70,21 @@ teardown() { teardown_project; }
   refute_output_contains "$output" "XILINXD_LICENSE_FILE"
 }
 
-@test "the Dockerfile never copies a license into the image" {
-  run grep -inE '\.lic|LICENSE_FILE' "$VCS_REPO_ROOT/docker/Dockerfile"
-  # The only mention must be the guard that rejects one.
-  [[ "$output" == *"refusing to ship an image containing a .lic file"* ]] ||
-    [[ "$output" == *"'*.lic'"* ]]
-  refute_output_contains "$output" "COPY"
+@test "the image never carries a license, and the build proves it" {
+  # Nothing in the image build may copy license material in...
+  run grep -inE '^\s*COPY.*\.lic' "$VCS_REPO_ROOT/docker/Dockerfile"
+  [ "$status" -ne 0 ]
+  # ...and the last step of the base stage refuses to ship one.
+  grep -q 'check-no-license.sh' "$VCS_REPO_ROOT/docker/Dockerfile"
+  grep -q 'refusing to ship an image containing a .lic file' \
+       "$VCS_REPO_ROOT/docker/check-no-license.sh"
+}
+
+@test "the license guard is the last step of the base stage" {
+  # Anything added after it would escape the check.
+  guard="$(grep -n 'check-no-license.sh' "$VCS_REPO_ROOT/docker/Dockerfile" | tail -1 | cut -d: -f1)"
+  stage="$(grep -n '^FROM base AS vivado' "$VCS_REPO_ROOT/docker/Dockerfile" | cut -d: -f1)"
+  [ -n "$guard" ] && [ -n "$stage" ]
+  run bash -c "sed -n '$((guard + 1)),$((stage - 1))p' '$VCS_REPO_ROOT/docker/Dockerfile' | grep -E '^(COPY|ADD|RUN)'"
+  [ "$status" -ne 0 ]
 }

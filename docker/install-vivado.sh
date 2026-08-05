@@ -6,7 +6,10 @@
 # other than `vcs build` still cannot install an unverified installer.
 set -euo pipefail
 
-installer="${1:?usage: install-vivado.sh <installer-tarball>}"
+installer="${1:-}"
+case "$installer" in
+  ''|*/) echo "install-vivado: no installer given; build with: vcs build --installer <tarball>" >&2; exit 1 ;;
+esac
 version="${VIVADO_VERSION:?}"
 edition_name="${VIVADO_EDITION_NAME:-Vivado ML Standard}"
 lock=/opt/vcs/pin/vivado-versions.lock

@@ -16,7 +16,7 @@ SHELLCHECK := $(TOOLS)/bin/shellcheck
 HADOLINT   := $(TOOLS)/bin/hadolint
 
 SH_SOURCES := bin/vcs $(wildcard lib/*.sh) $(wildcard lib/cmd/*.sh) \
-              $(wildcard scripts/*.sh) docker/entrypoint.sh docker/install-vivado.sh \
+              $(wildcard scripts/*.sh) $(wildcard docker/*.sh) \
               $(wildcard container/*.sh) test/helper.bash test/fixtures/bin/docker
 
 .PHONY: help

@@ -104,19 +104,20 @@ fi
 stray=0
 while IFS= read -r line; do
   case "$line" in
-    *'pkgs[@]'*)                                    continue ;;
+    *'pkgs[@]'*)                                    continue ;;   # the packages.lock path
     *'--no-install-recommends ca-certificates'*)    continue ;;
   esac
   bad "docker/Dockerfile installs packages outside the packages.lock path: $line"
   stray=1
-done < <(grep -E '(apt-get|apt) install' "$ROOT/docker/Dockerfile")
+done < <(grep -hE '(apt-get|apt) install' "$ROOT/docker/Dockerfile" "$ROOT/docker/install-packages.sh")
 [ "$stray" -eq 0 ] && ok "no unpinned apt-get install in the Dockerfile (bar the documented CA bootstrap)"
 
 # The bootstrap trust store must not survive into the image.
-if grep -q 'rm -f /opt/vcs/pin/ca-bootstrap.crt' "$ROOT/docker/Dockerfile"; then
+# shellcheck disable=SC2016  # a grep pattern matching the literal text
+if grep -q 'rm -f "\$BOOTSTRAP_CA"' "$ROOT/docker/install-packages.sh"; then
   ok "the bootstrap CA bundle is removed in the layer that uses it"
 else
-  bad "docker/Dockerfile does not delete /opt/vcs/pin/ca-bootstrap.crt"
+  bad "docker/install-packages.sh does not delete the bootstrap CA bundle"
 fi
 
 # --- 3. downloads -----------------------------------------------------------

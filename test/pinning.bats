@@ -101,10 +101,10 @@ teardown() { teardown_project; }
   work="$TMP/repo5"
   cp -r "$VCS_REPO_ROOT" "$work"
   rm -rf "$work/.git" "$work/.tools"
-  sed -i 's|rm -f /opt/vcs/pin/ca-bootstrap.crt|true|' "$work/docker/Dockerfile"
+  sed -i 's|rm -f "$BOOTSTRAP_CA"|true|' "$work/docker/install-packages.sh"
   run "$work/scripts/verify-pinning.sh"
   [ "$status" -ne 0 ]
-  [[ "$output" == *"ca-bootstrap.crt"* ]]
+  [[ "$output" == *"bootstrap CA bundle"* ]]
 }
 
 @test "the build-time CA is never added to the runtime trust store" {
@@ -113,4 +113,28 @@ teardown() { teardown_project; }
   run grep -n 'ca-bootstrap' "$VCS_REPO_ROOT/docker/Dockerfile"
   [ "$status" -eq 0 ]
   refute_output_contains "$output" "/etc/ssl/certs/ca-bootstrap"
+}
+
+@test "no RUN instruction depends on bash: SHELL is ignored under OCI format" {
+  # A `docker` that is really podman/buildah builds in OCI format, where the
+  # SHELL instruction is silently dropped and RUN falls back to /bin/sh.  Any
+  # bashism in a RUN body is a syntax error there, so the real work belongs in
+  # a script with its own shebang.
+  run grep -nE "^\s+(set -[a-z]* *-?o pipefail|mapfile|readarray)|<<<|\[\[" \
+      "$VCS_REPO_ROOT/docker/Dockerfile"
+  [ "$status" -ne 0 ] || { echo "bashism in a Dockerfile RUN:"; echo "$output"; false; }
+}
+
+@test "the Dockerfile does not rely on the SHELL instruction" {
+  run grep -n '^SHELL' "$VCS_REPO_ROOT/docker/Dockerfile"
+  [ "$status" -ne 0 ]
+}
+
+@test "every script the image runs has an explicit interpreter" {
+  for f in "$VCS_REPO_ROOT"/docker/*.sh "$VCS_REPO_ROOT"/container/*.sh; do
+    # profile.sh is sourced by the login shell, not executed.
+    [ "$(basename "$f")" = "profile.sh" ] && continue
+    head -n1 "$f" | grep -q '^#!' || { echo "no shebang: $f"; false; }
+    [ -x "$f" ] || { echo "not executable: $f"; false; }
+  done
 }
