@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# vvd -- containerised Vivado, driven entirely from the command line.
+# https://github.com/sabas0ba/vivado-container-suite
+set -euo pipefail
+
+VVD_VERSION="0.1.0"
+
+_vvd_self="${BASH_SOURCE[0]}"
+while [ -L "$_vvd_self" ]; do
+  _vvd_link="$(readlink "$_vvd_self")"
+  case "$_vvd_link" in
+    /*) _vvd_self="$_vvd_link" ;;
+    *)  _vvd_self="$(dirname "$_vvd_self")/$_vvd_link" ;;
+  esac
+done
+VVD_ROOT="$(cd "$(dirname "$_vvd_self")/.." && pwd)"
+export VVD_ROOT VVD_VERSION
+
+# shellcheck source=lib/log.sh
+. "$VVD_ROOT/lib/log.sh"
+# shellcheck source=lib/config.sh
+. "$VVD_ROOT/lib/config.sh"
+# shellcheck source=lib/engine.sh
+. "$VVD_ROOT/lib/engine.sh"
+# shellcheck source=lib/license.sh
+. "$VVD_ROOT/lib/license.sh"
+# shellcheck source=lib/display.sh
+. "$VVD_ROOT/lib/display.sh"
+# shellcheck source=lib/usb.sh
+. "$VVD_ROOT/lib/usb.sh"
+# shellcheck source=lib/run.sh
+. "$VVD_ROOT/lib/run.sh"
+# shellcheck source=lib/flow.sh
+. "$VVD_ROOT/lib/flow.sh"
+
+trap vvd_cleanup EXIT
+
+usage() {
+  cat <<'HELPTEXT'
+vvd -- containerised Vivado, driven entirely from the command line.
+
+USAGE
+  vvd [global options] <command> [command options] [--] [args...]
+
+IMAGE
+  build              Build the container image
+  pull [REF]         Pull a prebuilt image and retag it locally
+  image              Print the image reference in use
+
+FLOWS
+  synth              Synthesise
+  impl               Place & route (runs synth first if needed)
+  bitstream          Write the bitstream (runs impl first if needed)
+  flow               synth -> impl -> bitstream
+  sim [--gui]        Elaborate and run the testbench with xsim
+  program [--bit F]  Program the device over JTAG
+  clean              Remove the build directory
+
+INTERACTIVE
+  tcl [SCRIPT]       vivado -mode tcl (a Tcl console, or run SCRIPT in batch)
+  run SCRIPT [ARGS]  vivado -mode batch -source SCRIPT
+  gui [XPR]          Launch the Vivado GUI
+  shell [CMD...]     A shell inside the container with Vivado on PATH
+  hw-server          Run hw_server in the container and publish its port
+
+DIAGNOSTICS
+  doctor             Check the host, the engine, the image and the license
+  selftest           Run the in-container availability tests
+  info               Print the resolved configuration
+  jtag-rules         Print (or install) the udev rules for JTAG cables
+  version            Print the vvd version
+
+GLOBAL OPTIONS
+  -C, --project DIR    Project root (default: nearest ancestor with vvd.conf)
+      --config FILE    Use FILE instead of <project>/vvd.conf
+      --vivado VER     Vivado version (default: 2025.2)
+      --engine E       auto | docker | podman
+      --image REF      Override the image reference
+      --license SPEC   port@host | /path/to.lic | dir:/path | none
+      --display MODE   auto | x11 | wayland | xvfb | none
+      --jtag MODE      host | usb | remote:HOST[:PORT] | none
+      --gpu            Pass /dev/dri through for hardware-accelerated GL
+      --build-dir DIR  Output directory, relative to the project root
+  -n, --dry-run        Print the container command instead of running it
+  -v, --verbose        Debug logging
+  -q, --quiet          Warnings and errors only
+  -h, --help           This message
+
+  Every option has a VVD_* configuration key; see docs/02-configuration.md.
+HELPTEXT
+}
+
+# ---------------------------------------------------------------------------
+# global option parsing (stops at the first non-option = the command)
+# ---------------------------------------------------------------------------
+VVD_DRY_RUN=0
+VVD_GPU=0
+_opt_project=""
+_opt_config=""
+declare -A _opt_override=()
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -C|--project)   _opt_project="${2:?--project needs a directory}"; shift 2 ;;
+    --config)       _opt_config="${2:?--config needs a file}"; shift 2 ;;
+    --vivado)       _opt_override[VVD_VIVADO_VERSION]="${2:?--vivado needs a version}"; shift 2 ;;
+    --engine)       _opt_override[VVD_ENGINE]="${2:?--engine needs a value}"; shift 2 ;;
+    --image)        _opt_override[VVD_IMAGE]="${2:?--image needs a reference}"; shift 2 ;;
+    --license)      _opt_override[VVD_LICENSE]="${2:?--license needs a spec}"; shift 2 ;;
+    --display)      _opt_override[VVD_DISPLAY_MODE]="${2:?--display needs a mode}"; shift 2 ;;
+    --jtag)         _opt_override[VVD_JTAG_MODE]="${2:?--jtag needs a mode}"; shift 2 ;;
+    --build-dir)    _opt_override[VVD_BUILD_DIR]="${2:?--build-dir needs a directory}"; shift 2 ;;
+    --part)         _opt_override[VVD_PART]="${2:?--part needs a value}"; shift 2 ;;
+    --top)          _opt_override[VVD_TOP]="${2:?--top needs a value}"; shift 2 ;;
+    --gpu)          VVD_GPU=1; shift ;;
+    -n|--dry-run)   VVD_DRY_RUN=1; shift ;;
+    -v|--verbose)   VVD_LOG_LEVEL=debug; shift ;;
+    -q|--quiet)     VVD_LOG_LEVEL=warn; shift ;;
+    -h|--help)      usage; exit 0 ;;
+    --version)      printf 'vvd %s\n' "$VVD_VERSION"; exit 0 ;;
+    --)             shift; break ;;
+    -*)             die_usage "unknown global option: $1" ;;
+    *)              break ;;
+  esac
+done
+export VVD_DRY_RUN VVD_GPU VVD_LOG_LEVEL
+
+[ $# -gt 0 ] || { usage; exit 2; }
+VVD_COMMAND="$1"; shift
+
+case "$VVD_COMMAND" in
+  version) printf 'vvd %s\n' "$VVD_VERSION"; exit 0 ;;
+  help)    usage; exit 0 ;;
+esac
+
+# ---------------------------------------------------------------------------
+# configuration
+# ---------------------------------------------------------------------------
+if [ -n "$_opt_project" ]; then
+  [ -d "$_opt_project" ] || die "--project: not a directory: $_opt_project"
+  _project_root="$(abspath "$_opt_project")"
+elif [ -n "$_opt_config" ]; then
+  _project_root="$(dirname "$(abspath "$_opt_config")")"
+else
+  _project_root="$(find_project_root "$PWD" || printf '%s' "$PWD")"
+fi
+
+load_config "$_project_root" "$_opt_config"
+
+for _k in "${!_opt_override[@]}"; do
+  printf -v "$_k" '%s' "${_opt_override[$_k]}"
+  export "${_k?}"
+done
+
+derive_config
+
+log_debug "project root: $VVD_PROJECT_ROOT"
+log_debug "image:        $VVD_IMAGE"
+
+# ---------------------------------------------------------------------------
+# dispatch
+# ---------------------------------------------------------------------------
+_cmd_file="$VVD_ROOT/lib/cmd/${VVD_COMMAND}.sh"
+[ -f "$_cmd_file" ] || die_usage "unknown command: $VVD_COMMAND"
+# shellcheck source=/dev/null
+. "$_cmd_file"
+"cmd_${VVD_COMMAND//-/_}" "$@"

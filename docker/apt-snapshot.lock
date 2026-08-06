@@ -1,0 +1,13 @@
+# Pinned Ubuntu archive snapshot.
+#
+# https://snapshot.ubuntu.com serves an immutable, byte-for-byte reproducible
+# view of archive.ubuntu.com at a point in time.  Pinning the snapshot pins the
+# ENTIRE dependency closure -- every transitive .deb, not just the top-level
+# names in packages.list -- and apt still verifies each .deb against the
+# GPG-signed InRelease -> Packages -> SHA256 chain.
+#
+# Bump with:  ./scripts/lock-apt.sh --snapshot <YYYYMMDDTHHMMSSZ>
+APT_SNAPSHOT=20260801T000000Z
+APT_SUITE=noble
+APT_COMPONENTS="main restricted universe multiverse"
+APT_POCKETS="noble noble-updates noble-security"

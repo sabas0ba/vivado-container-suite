@@ -1,0 +1,17 @@
+# Machine-specific configuration -- never commit a license path or a lab
+# hostname into the shared config.
+vvd.local.conf
+
+# Pinned development tooling (fetch with: make tools)
+/.tools/
+
+# Flow output
+build/
+*.jou
+*.log
+.Xil/
+.tcl-syntax.tcl
+xsim.dir/
+*.wdb
+*.pb
+*.str

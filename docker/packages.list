@@ -1,0 +1,120 @@
+# Top-level apt packages installed into the vivado-container-suite base image.
+#
+# Only package NAMES belong here.  Exact versions are resolved against the
+# pinned Ubuntu archive snapshot (docker/apt-snapshot.lock) by
+# scripts/lock-apt.sh and written to docker/packages.lock.
+#
+# One name per line.  '#' starts a comment.
+
+## --- base runtime -----------------------------------------------------------
+ca-certificates
+locales
+tzdata
+procps
+psmisc
+passwd
+file
+less
+iproute2
+net-tools
+git
+make
+python3
+libgomp1
+lsb-release
+
+## --- archive handling (Vivado installer, IP catalogues, reports) ------------
+tar
+gzip
+bzip2
+xz-utils
+unzip
+zip
+
+## --- terminal / Tcl console -------------------------------------------------
+# tcl gives the image a standalone tclsh, which is what lets CI syntax-check
+# the tcl/ layer without a Vivado licence.
+tcl
+libtinfo6
+libncurses6
+libncursesw6
+
+## --- X11 core (GUI + X-forwarding) ------------------------------------------
+libx11-6
+libx11-xcb1
+libxau6
+libxdmcp6
+libxext6
+libxrender1
+libxtst6
+libxi6
+libxrandr2
+libxfixes3
+libxcursor1
+libxinerama1
+libxft2
+libxss1
+libxcomposite1
+libxdamage1
+libxmu6
+libsm6
+libice6
+xauth
+x11-utils
+xvfb
+# x11vnc exports the headless Xvfb display, so a GUI is usable on a machine
+# with no X server of its own (`vvd gui --vnc`).
+x11vnc
+
+## --- XCB / xkb (Vivado bundles Qt, which dlopen()s these) -------------------
+libxcb1
+libxcb-glx0
+libxcb-icccm4
+libxcb-image0
+libxcb-keysyms1
+libxcb-randr0
+libxcb-render0
+libxcb-render-util0
+libxcb-shape0
+libxcb-shm0
+libxcb-sync1
+libxcb-xfixes0
+libxcb-xinerama0
+libxcb-xkb1
+libxcb-cursor0
+libxcb-dri2-0
+libxcb-dri3-0
+libxcb-present0
+libxkbcommon0
+libxkbcommon-x11-0
+
+## --- fonts ------------------------------------------------------------------
+fontconfig
+libfontconfig1
+libfreetype6
+fonts-dejavu-core
+
+## --- GL / EGL (schematic viewer, device view) -------------------------------
+libgl1
+libglu1-mesa
+libglx-mesa0
+libegl1
+libgbm1
+
+## --- GTK / NSS stack (Documentation Navigator, embedded web views) ----------
+libnss3
+libnspr4
+libdbus-1-3
+libasound2t64
+libatk1.0-0t64
+libatk-bridge2.0-0t64
+libcups2t64
+libgtk-3-0t64
+libgdk-pixbuf-2.0-0
+libpango-1.0-0
+libcairo2
+
+## --- JTAG / USB (hw_server, xsdb, Digilent + FTDI cables) -------------------
+libusb-1.0-0
+libftdi1-2
+usbutils
