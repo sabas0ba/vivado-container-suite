@@ -6,23 +6,23 @@
 vvd synth       # 合成
 vvd impl        # 配置配線。合成済みチェックポイントが無ければ先に合成する
 vvd bitstream   # ビットストリーム。実装済みでなければ先に実装する
-vvd flow        # 上記すべてを Vivado 1 回の起動で
+vvd flow        # 上記すべてを 1 回の Vivado 起動で実行する
 vvd sim         # 論理シミュレーション
 ```
 
-`flow` は Vivado の起動が 1 回で済むぶん速い (起動に 20〜40 秒かかる)。
-段階的にデバッグするときは個別コマンドを使う。
+`flow` は Vivado の起動が 1 回で済むため高速である (起動には 20〜40 秒を要する)。
+段階的にデバッグする場合は個別のコマンドを使用する。
 
 ## nonproject フロー (既定)
 
-`.xpr` を作らず、チェックポイント (`.dcp`) を段階間の受け渡しに使う。
-生成物がすべてファイルとして残り、再現性が高いので CI 向き。
+`.xpr` を生成せず、チェックポイント (`.dcp`) を段階間の受け渡しに使用する。
+生成物がすべてファイルとして残り、再現性が高いため CI に適している。
 
 ```
 sources ──synth_design──▶ post_synth.dcp ──opt/place/phys_opt/route──▶ post_route.dcp ──▶ <top>.bit
 ```
 
-`tcl/flow.tcl` が実装している。各段階で `build/reports/` にレポートを書く。
+実装は `tcl/flow.tcl` にある。各段階で `build/reports/` にレポートを出力する。
 
 | レポート | 内容 |
 |---|---|
@@ -34,11 +34,11 @@ sources ──synth_design──▶ post_synth.dcp ──opt/place/phys_opt/rout
 
 ### タイミング未達は失敗として扱う
 
-Vivado 自体はタイミング未達でも終了コード 0 を返す。CI ではこれが致命的なので、
-`vvd impl` は WNS/WHS が負なら**ビルドを失敗させる**。
+Vivado はタイミング未達の場合でも終了コード 0 を返す。CI ではこの挙動が問題となる
+ため、`vvd impl` は WNS/WHS が負の場合にビルドを失敗させる。
 
 ```sh
-VVD_ALLOW_TIMING_VIOLATION=1 vvd impl     # 承知のうえで進める
+VVD_ALLOW_TIMING_VIOLATION=1 vvd impl     # 未達を許容して続行する
 ```
 
 ### フック
@@ -48,77 +48,80 @@ VVD_PRE_TCL=scripts/pre_synth.tcl     # ソース読み込み後、synth_design 
 VVD_POST_TCL=scripts/post_bit.tcl     # write_bitstream の後
 ```
 
-フックの中では `tcl/lib.tcl` のヘルパ (`vvd::env`, `vvd::build_dir`, ...) が
-使える状態になっている。
+フック内では `tcl/lib.tcl` のヘルパ (`vvd::env`、`vvd::build_dir` など) が
+使用できる。
 
 ## project フロー
 
-既存の `.xpr` が正であるプロジェクト向け。
+既存の `.xpr` を正とするプロジェクト向けのモードである。
 
 ```conf
 VVD_FLOW_MODE=project
 VVD_XPR=hw/blinky.xpr
 ```
 
-`launch_runs synth_1` / `launch_runs impl_1 -to_step write_bitstream` を駆動し、
-`wait_on_run` で待ち、生成された `.bit` / `.ltx` を `build/` に集める。
-最新の run はスキップされる (`PROGRESS == 100%` かつ `NEEDS_REFRESH == 0`)。
+`launch_runs synth_1` および `launch_runs impl_1 -to_step write_bitstream` を実行し、
+`wait_on_run` で完了を待ち、生成された `.bit` / `.ltx` を `build/` に収集する。
+最新の状態にある run はスキップする (`PROGRESS == 100%` かつ `NEEDS_REFRESH == 0`)。
 
 ## シミュレーション
 
 ```sh
 vvd sim                       # ヘッドレス実行
 vvd sim --gui                 # xsim の波形ビューアを開く
-vvd sim --top tb_other        # トップを一時的に差し替え
-vvd sim --time 500us          # 実行時間
-vvd sim --no-waves            # 波形を記録しない (速い)
+vvd sim --top tb_other        # トップモジュールを一時的に変更する
+vvd sim --time 500us          # 実行時間を指定する
+vvd sim --no-waves            # 波形を記録しない (高速)
 ```
 
-Vivado プロジェクトを作らず `xvlog` / `xvhdl` / `xelab` / `xsim` を直接叩くので、
-起動が 1 秒程度で済む。`unisims_ver` / `unimacro_ver` / `secureip` は常にリンクされる。
+Vivado プロジェクトを生成せず、`xvlog` / `xvhdl` / `xelab` / `xsim` を直接実行する
+ため、起動は 1 秒程度で完了する。`unisims_ver` / `unimacro_ver` / `secureip` は
+常にリンクされる。
 
 ### 合否判定
 
-`xsim` はテストベンチが `$fatal` してもプロセスとしては 0 で終わる。
-`container/sim.sh` はログを走査し、`Error` / `Fatal` / `$fatal` / `Failure:` /
-`*** FAILED` / `ASSERTION FAILED` のいずれかが出ていれば失敗にする。
+`xsim` は、テストベンチが `$fatal` を呼んだ場合でもプロセスとしては 0 で終了する。
+そのため `container/sim.sh` はログを走査し、`Error` / `Fatal` / `$fatal` / `Failure:` /
+`*** FAILED` / `ASSERTION FAILED` のいずれかが出力されていれば失敗として扱う。
 
-テストベンチ側では、失敗時に `*** FAILED:` で始まる行を出せば確実に拾われる。
-同梱の `examples/blinky/sim/tb_blinky.v` と `container/smoke/tb_smoke.v` が
-その書き方の例になっている。
+テストベンチ側では、失敗時に `*** FAILED:` で始まる行を出力すれば確実に検出される。
+同梱の `examples/blinky/sim/tb_blinky.v` および `container/smoke/tb_smoke.v` が
+その記述例である。
 
 ## 生成物のオーナーシップ
 
-`/work` に書かれるファイルは呼び出したユーザの uid/gid で作られる。
-rootful docker では entrypoint が root から降格し、rootless podman では
-`--userns=keep-id` が同じ結果を与える。
+`/work` に書き込まれるファイルは、呼び出したユーザの uid/gid で作成される。
+rootful docker では entrypoint が root から権限を降格し、rootless podman では
+`--userns=keep-id` が同一の結果をもたらす。
 
 ```sh
-vvd selftest --stage identity     # 実際に確認する
+vvd selftest --stage identity     # 実際の所有者を確認する
 ```
 
-`VVD_USER_MODE=root` にすると降格しない (デバッグ用。生成物が root 所有になる)。
+`VVD_USER_MODE=root` を指定すると権限を降格しない。デバッグ用であり、生成物は
+root 所有となる。
 
-## 掃除
+## 生成物の削除
 
 ```sh
-vvd clean          # build/ を消す (確認あり)
+vvd clean          # build/ を削除する (確認あり)
 vvd clean -f       # 確認なし
-vvd clean --all    # ツールキャッシュも消す
+vvd clean --all    # ツールキャッシュも削除する
 ```
 
-`VVD_BUILD_DIR` が絶対パスや `..` を含む場合、`vvd clean` は拒否する。
+`VVD_BUILD_DIR` が絶対パスまたは `..` を含む場合、`vvd clean` は実行を拒否する。
 
-## 任意の Tcl を走らせる
+## 任意の Tcl スクリプトの実行
 
 ```sh
 vvd run scripts/report_all.tcl              # vivado -mode batch -source
-vvd run scripts/sweep.tcl arg1 arg2         # -tclargs で渡る
+vvd run scripts/sweep.tcl arg1 arg2         # -tclargs として渡される
 vvd tcl                                     # 対話コンソール
 ```
 
-スクリプトはプロジェクトルート配下に無ければならない (コンテナから見えないため)。
-`tcl/lib.tcl` を `source` すればヘルパが使える。
+スクリプトはプロジェクトルート配下に配置する必要がある。それ以外の場所にある
+ファイルはコンテナから参照できない。`tcl/lib.tcl` を `source` するとヘルパを
+使用できる。
 
 ```tcl
 source [file join $::env(VVD_CONTAINER_TCL) lib.tcl]

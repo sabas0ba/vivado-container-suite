@@ -1,22 +1,22 @@
 # 07 JTAG
 
-## 3 つの転送方式
+## 3 種類の転送方式
 
-`--jtag` / `VVD_JTAG_MODE`:
+`--jtag` / `VVD_JTAG_MODE` で指定する。
 
 | 値 | `hw_server` の場所 | コンテナに渡す権限 |
 |---|---|---|
-| `host` (既定) | **ホスト** | なし。TCP 接続のみ |
-| `remote:HOST[:PORT]` | 指定したマシン | なし。TCP 接続のみ |
-| `usb` | コンテナ内 | 該当する USB デバイスノードのみ |
+| `host` (既定) | ホスト | なし。TCP 接続のみを行う |
+| `remote:HOST[:PORT]` | 指定したマシン | なし。TCP 接続のみを行う |
+| `usb` | コンテナ内 | 該当する USB デバイスノードのみを渡す |
 | `none` | — | — |
 
-**既定の `host` が最も安全**で、これを勧める。コンテナにはデバイスも
-ケーパビリティも一切渡らない。`--privileged` はどのモードでも使わない。
+既定の `host` が最も安全であり、通常はこれを使用する。コンテナにはデバイスも
+ケーパビリティも一切渡らない。`--privileged` はいずれのモードでも使用しない。
 
 ## host モード
 
-ホストで `hw_server` を動かし、コンテナはそこへ TCP で繋ぐ。
+ホスト上で `hw_server` を起動し、コンテナからそこへ TCP で接続する。
 
 ```sh
 # ホスト側 (一度だけ)
@@ -25,25 +25,25 @@ hw_server &
 ```
 
 ```sh
-vvd program                    # 既定でこの経路を使う
-vvd program --list             # スキャンチェーンの列挙だけ
+vvd program                    # 既定でこの経路を使用する
+vvd program --list             # スキャンチェーンの列挙のみを行う
 ```
 
-コンテナ内からは `host.docker.internal` (docker) /
+コンテナ内からは `host.docker.internal` (docker) または
 `host.containers.internal` (podman) で解決される。docker では
-`--add-host ...:host-gateway` が自動で付く。
+`--add-host ...:host-gateway` が自動的に付与される。
 
-ホストに Vivado が入っていない場合は、USB を渡したコンテナで `hw_server` を
-動かして、その口を公開できる:
+ホストに Vivado が導入されていない場合は、USB を渡したコンテナで `hw_server` を
+起動し、そのポートを公開できる。
 
 ```sh
-vvd hw-server                       # 127.0.0.1:3121 で待ち受け
-vvd hw-server --bind 0.0.0.0        # 他マシンからも (要注意: 誰でも書き込める)
+vvd hw-server                       # 127.0.0.1:3121 で待ち受ける
+vvd hw-server --bind 0.0.0.0        # 他マシンからも到達可能にする (誰でも書き込める点に注意)
 ```
 
 ## remote モード
 
-ラボの共有マシンや CI のハードウェアランナーに繋ぐ。
+ラボの共有マシンや CI のハードウェアランナーへ接続する場合に使用する。
 
 ```sh
 vvd --jtag remote:lab-01.example.com:3121 program
@@ -57,75 +57,77 @@ VVD_HW_SERVER_PORT=3121
 
 ## usb モード
 
-ケーブルをコンテナに直接渡す。手軽だが、`host` モードより権限が広い。
+ケーブルをコンテナへ直接渡す方式である。簡便だが、`host` モードより広い権限を
+必要とする。
 
 ```sh
 vvd --jtag usb program
 ```
 
-`lsusb` を見て、既知のベンダ ID を持つデバイスの
-`/dev/bus/usb/<bus>/<dev>` だけを `--device` で渡す。
+`lsusb` の出力を参照し、既知のベンダ ID を持つデバイスの
+`/dev/bus/usb/<bus>/<dev>` のみを `--device` で渡す。
 
 | VID | ケーブル |
 |---|---|
-| `0403` | FTDI 系 — Digilent HS1/HS2/HS3、JTAG-SMT2/SMT3、Arty/Nexys のオンボード |
+| `0403` | FTDI 系。Digilent HS1/HS2/HS3、JTAG-SMT2/SMT3、Arty/Nexys のオンボード |
 | `03fd` | Xilinx Platform Cable USB / USB II (DLC9, DLC10) |
 | `1443` | Digilent (旧 VID) |
-| `1d50` | 一部のオープンなアダプタ |
+| `1d50` | 一部のオープンハードウェアのアダプタ |
 
-**制約**: USB のバス番号・デバイス番号は抜き差しで変わる。ケーブルを挿し直したら
-コンテナを起動し直す必要がある。これを避けたい場合は `host` モードにするか、
-明示的に USB ツリー全体を渡す:
+制約として、USB のバス番号およびデバイス番号は抜き差しによって変化する。ケーブルを
+接続し直した場合はコンテナを再起動する必要がある。これを回避するには `host` モードを
+使用するか、次のように USB ツリー全体を明示的に渡す。
 
 ```sh
-VVD_JTAG_USB_ALL=1 vvd --jtag usb program     # 全 USB デバイスが見える。警告が出る
+VVD_JTAG_USB_ALL=1 vvd --jtag usb program     # 全 USB デバイスが見える (警告を表示する)
 ```
 
 ### udev ルール
 
-デバイスノードを一般ユーザで開けるようにする。これはホスト側の設定であり、
-これがあるおかげで Vivado もコンテナも root で動かす必要がなくなる。
+デバイスノードを一般ユーザで開けるようにするための設定である。ホスト側の設定で
+あり、これによって Vivado もコンテナも root で実行する必要がなくなる。
 
 ```sh
-vvd jtag-rules --print     # 内容を確認
-vvd jtag-rules --install   # /etc/udev/rules.d/ に導入 (sudo)
-vvd jtag-rules --list      # 今つながっているケーブル
+vvd jtag-rules --print     # 内容を確認する
+vvd jtag-rules --install   # /etc/udev/rules.d/ に導入する (sudo)
+vvd jtag-rules --list      # 現在接続されているケーブルを表示する
 ```
 
-導入したらケーブルを挿し直す。ルールは `uaccess` タグ (ローカルログイン
-セッションのユーザに付与) と `plugdev` グループの両方を設定するので、
-どちらの運用にも対応する。
+導入後はケーブルを接続し直す。ルールは `uaccess` タグ (ローカルログインセッションの
+ユーザに付与される) と `plugdev` グループの両方を設定するため、いずれの運用にも
+対応する。
 
-## 書き込む
+## デバイスへの書き込み
 
 ```sh
 vvd program                                 # build/<top>.bit
 vvd program --bit build/other.bit
 vvd program --target xc7a35t_0              # スキャンチェーンに複数デバイスがある場合
-vvd program --probes build/blinky.ltx       # ILA/VIO のプローブ
+vvd program --probes build/blinky.ltx       # ILA/VIO のプローブを指定する
 vvd program --list                          # 列挙のみ
 ```
 
 `tcl/program.tcl` が `connect_hw_server` → `open_hw_target` →
-`program_hw_devices` を実行し、最後に DONE ビットを確認する。
-到達できない・ターゲットが無い場合は、原因と対処を添えて失敗する。
+`program_hw_devices` を実行し、最後に DONE ビットを確認する。到達できない場合や
+ターゲットが存在しない場合は、原因と対処方法を示して失敗する。
 
 ## 確認
 
 ```sh
-vvd doctor                   # hw_server の待ち受け、ケーブル、パーミッション
-vvd selftest --stage jtag    # 実際に接続してスキャンチェーンを読む
+vvd doctor                   # hw_server の待ち受け、ケーブル、パーミッションを検査する
+vvd selftest --stage jtag    # 実際に接続してスキャンチェーンを読み取る
 ```
 
-`vvd selftest` の JTAG ステージは、ケーブルが無い・`hw_server` が居ない場合は
-失敗ではなく **skip** になる。ハードウェアの有無で CI が壊れないようにするため。
+`vvd selftest` の JTAG ステージは、ケーブルが接続されていない場合や `hw_server` が
+起動していない場合、失敗ではなく skip として扱う。ハードウェアの有無によって CI が
+失敗しないようにするためである。
 
-## よくある失敗
+## よくあるエラー
 
 | 症状 | 対処 |
 |---|---|
-| `cannot reach hw_server at TCP:host.docker.internal:3121` | ホストで `hw_server` が動いていない。`vvd doctor` が教える |
-| `no JTAG target is attached` | ケーブル・ボード電源・udev ルールを確認 |
-| `no JTAG cable found on the USB bus` | `vvd jtag-rules --list` で認識を確認。挿し直したら再起動 |
-| 抜き差し後に動かない (usb モード) | デバイス番号が変わった。コンテナを起動し直す |
-| 権限エラー | `vvd jtag-rules --install` の後、ケーブルを挿し直す |
+| `cannot reach hw_server at TCP:host.docker.internal:3121` | ホストで `hw_server` が起動していない。`vvd doctor` で確認できる |
+| `no JTAG target is attached` | ケーブル、ボードの電源、udev ルールを確認する |
+| `no JTAG cable found on the USB bus` | `vvd jtag-rules --list` で認識状況を確認する。接続し直した場合はコンテナを再起動する |
+| 抜き差し後に動作しない (usb モード) | デバイス番号が変化している。コンテナを再起動する |
+| 権限エラー | `vvd jtag-rules --install` を実行し、ケーブルを接続し直す |
