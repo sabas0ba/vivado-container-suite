@@ -1,7 +1,7 @@
 # 06 GUI と Tcl
 
-Tcl コンソールと GUI はどちらも同じイメージ・同じマウント構成で動く。
-違いはディスプレイの受け渡し方だけ。
+Tcl コンソールと GUI は、いずれも同一のイメージとマウント構成で動作する。
+両者の違いはディスプレイの受け渡し方のみである。
 
 ## Tcl コンソール
 
@@ -9,7 +9,7 @@ Tcl コンソールと GUI はどちらも同じイメージ・同じマウン�
 vvd tcl
 ```
 
-`vivado -mode tcl` が対話モードで立ち上がる。ディスプレイは不要。
+`vivado -mode tcl` が対話モードで起動する。ディスプレイは不要である。
 
 ```tcl
 Vivado% source $env(VVD_CONTAINER_TCL)/lib.tcl
@@ -19,11 +19,11 @@ Vivado% report_utilization
 Vivado% exit
 ```
 
-バッチ実行:
+バッチ実行の場合は次のようにする。
 
 ```sh
 vvd run scripts/analyze.tcl
-vvd run scripts/sweep.tcl 100 200 400      # -tclargs として渡る
+vvd run scripts/sweep.tcl 100 200 400      # -tclargs として渡される
 ```
 
 ## GUI
@@ -31,30 +31,30 @@ vvd run scripts/sweep.tcl 100 200 400      # -tclargs として渡る
 ```sh
 vvd gui                          # 空の IDE
 vvd gui hw/blinky.xpr            # プロジェクトを開く
-vvd gui build/post_route.dcp     # チェックポイントを開く (nonproject フローの定石)
-vvd sim --gui                    # xsim の波形ビューア
+vvd gui build/post_route.dcp     # チェックポイントを開く (nonproject フローの標準手順)
+vvd sim --gui                    # xsim の波形ビューアを開く
 ```
 
 ### ディスプレイ方式
 
-`--display` / `VVD_DISPLAY_MODE`:
+`--display` / `VVD_DISPLAY_MODE` で指定する。
 
 | 値 | 動作 |
 |---|---|
-| `auto` (既定) | `DISPLAY` があれば `x11`、Wayland のみなら `xvfb`、それ以外は `none` |
-| `x11` | X ソケット、または ssh 転送された TCP ディスプレイ。実行ごとの untrusted な xauth cookie を渡す |
-| `wayland` | XWayland の X ソケット経由。実体は `x11` と同じ |
-| `xvfb` | コンテナ内で Xvfb を起動。`--vnc` を付ければ VNC で見られる |
-| `none` | ディスプレイなし。`vvd gui` は理由付きで拒否する |
+| `auto` (既定) | `DISPLAY` があれば `x11`、Wayland のみであれば `xvfb`、いずれも無い場合は `none` を選択する |
+| `x11` | X ソケット、または ssh 転送された TCP ディスプレイを使用する。実行ごとに untrusted な xauth cookie を渡す |
+| `wayland` | XWayland の X ソケットを経由する。実体は `x11` と同一である |
+| `xvfb` | コンテナ内で Xvfb を起動する。`--vnc` を指定すると VNC で表示できる |
+| `none` | ディスプレイを使用しない。`vvd gui` は理由を示して実行を拒否する |
 
 ### X11
 
-`vvd` は実行のたびに `xauth nlist | sed 's/^..../ffff/' | xauth nmerge` で
-**untrusted な使い捨て cookie** を作り、それだけをコンテナに渡す。
-`xhost +local:` のようにアクセス制御を丸ごと開ける必要はなく、
-cookie ファイルはコマンド終了時に消える。
+`vvd` は実行のたびに `xauth nlist | sed 's/^..../ffff/' | xauth nmerge` によって
+untrusted な使い捨て cookie を生成し、これのみをコンテナに渡す。`xhost +local:` の
+ようにアクセス制御全体を開放する必要はなく、cookie ファイルはコマンドの終了時に
+削除される。
 
-ホストに `xauth` が無い場合は警告が出る。その場合の代替:
+ホストに `xauth` が存在しない場合は警告を表示する。その場合は次の方法で代替する。
 
 ```sh
 xhost +SI:localuser:$(id -un)     # 自分のユーザだけ許可する
@@ -62,66 +62,68 @@ xhost +SI:localuser:$(id -un)     # 自分のユーザだけ許可する
 
 ### ssh -X 経由 (headless サーバ)
 
-ビルドサーバに `ssh -X` で入って GUI を出す場合、`DISPLAY` は `:0` ではなく
-`localhost:10.0` という **TCP ディスプレイ**になる。sshd は既定 (`X11UseLocalhost yes`)
-でホストの 127.0.0.1 だけを listen するため、ブリッジネットワークのコンテナからは
-どのゲートウェイアドレスでも届かない。
+ビルドサーバに `ssh -X` で接続して GUI を表示する場合、`DISPLAY` は `:0` ではなく
+`localhost:10.0` という TCP ディスプレイとなる。sshd は既定 (`X11UseLocalhost yes`)
+でホストの 127.0.0.1 のみを listen するため、ブリッジネットワーク上のコンテナからは
+いずれのゲートウェイアドレスを経由しても到達できない。
 
-そこで `vvd` は `DISPLAY` が TCP 形式のときに自動でホストネットワーク
-(`--network host`) を使う。X ソケットの mount は行わず、xauth cookie の扱いは同じ。
+そのため `vvd` は、`DISPLAY` が TCP 形式の場合に自動的にホストネットワーク
+(`--network host`) を使用する。X ソケットの mount は行わず、xauth cookie の扱いは
+同一である。
 
 ```sh
 ssh -X buildserver
-vvd gui                 # そのまま動く。--network host が自動で付く
+vvd gui                 # --network host が自動的に付与される
 ```
 
-このとき `--jtag host` の接続先も `host.docker.internal` から `localhost` に
-切り替わる (ホストのネットワーク名前空間を共有しているため)。
-`VVD_NETWORK` を別の値に設定している場合は競合を警告する。
+このとき `--jtag host` の接続先も `host.docker.internal` から `localhost` へ
+切り替わる。ホストのネットワーク名前空間を共有するためである。`VVD_NETWORK` に
+別の値を設定している場合は、競合を警告する。
 
-`DISPLAY` がリモートの X サーバ (`10.20.30.40:0` など) を指している場合は、
-コンテナから普通に到達できるので何も特別なことはしない。
+`DISPLAY` がリモートの X サーバ (`10.20.30.40:0` など) を指す場合は、コンテナから
+通常どおり到達できるため、特別な処理は行わない。
 
 ### Wayland
 
-Vivado は X11 専用の Qt を同梱しているため、Wayland ネイティブでは動かない。
-ほぼすべての Wayland コンポジタが XWayland を持っているので、`DISPLAY` が
-設定されていればそのまま `x11` 方式で動く。`DISPLAY` が無ければ、
-その旨のエラーが出る (黙って壊れることはない)。
+Vivado は X11 専用の Qt を同梱しているため、Wayland ネイティブでは動作しない。
+ほぼすべての Wayland コンポジタが XWayland を備えているため、`DISPLAY` が設定されて
+いれば `x11` 方式で動作する。`DISPLAY` が存在しない場合は、その旨のエラーを表示する。
 
 ### ヘッドレス (xvfb) と VNC
 
-X サーバが全く無いマシンで GUI を使う場合。
+X サーバが存在しないマシンで GUI を使用する場合の方式である。
 
 ```sh
-vvd gui --vnc                        # 127.0.0.1:5901 に公開
-vvd gui --vnc --vnc-port 5999        # ポートを変える
-vvd sim --vnc                        # 波形ビューアを VNC で
+vvd gui --vnc                        # 127.0.0.1:5901 に公開する
+vvd gui --vnc --vnc-port 5999        # ポートを変更する
+vvd sim --vnc                        # 波形ビューアを VNC で表示する
 ```
 
-コンテナ内で Xvfb が `:99` 以降の空き番号に立ち上がり (解像度は
-`VVD_XVFB_GEOMETRY`、既定 `1920x1080x24`)、x11vnc がそれを公開する。
+コンテナ内で Xvfb が `:99` 以降の空き番号で起動し (解像度は `VVD_XVFB_GEOMETRY`、
+既定値は `1920x1080x24`)、x11vnc がこれを公開する。
 
-**既定で 127.0.0.1 のみに公開し、パスワードを必須にする。** パスワードは
-指定が無ければ 1 回限りのものを生成して表示する。`VVD_VNC_PASSWORD` で自分の
-ものを指定してもよい。
+既定では 127.0.0.1 のみに公開し、パスワードを必須とする。パスワードの指定が無い
+場合は 1 回限りのものを生成して表示する。`VVD_VNC_PASSWORD` で任意のものを指定する
+こともできる。
 
-パスワードは**環境変数にも引数にも入れない** — どちらも `docker inspect` や
-`ps` が見える相手には読めてしまうため。0600 の一時ファイルを read-only で
-mount して渡し、コマンド終了時に削除する。x11vnc は `-passwdfile` で受け取る。
+パスワードは環境変数にも引数にも格納しない。いずれも `docker inspect` や `ps` を
+実行できる相手から読み取れるためである。パーミッション 0600 の一時ファイルを
+read-only で mount して受け渡し、コマンドの終了時に削除する。x11vnc へは
+`-passwdfile` で渡す。
 
-別マシンから見るときは SSH ポート転送を使う (VNC の通信自体は暗号化されない)。
+別のマシンから接続する場合は SSH ポート転送を使用する。VNC の通信自体は暗号化
+されないためである。
 
 ```sh
 ssh -L 5901:127.0.0.1:5901 you@buildserver
 vncviewer 127.0.0.1:5901
 ```
 
-`--vnc-bind 0.0.0.0` で全インタフェースに公開できるが、警告が出る。
-そのポートに到達できる相手は誰でも GUI を操作できる。
+`--vnc-bind 0.0.0.0` を指定すると全インタフェースに公開できるが、警告を表示する。
+そのポートに到達できる相手は誰でも GUI を操作できる状態となる。
 
-VNC を使わず Xvfb だけを起動することもできる (GUI が起動すること自体を
-CI で確認したい場合など)。
+VNC を使用せず Xvfb のみを起動することもできる。GUI が起動すること自体を CI で
+確認する場合などに使用する。
 
 ```sh
 vvd --display xvfb gui
@@ -129,25 +131,26 @@ vvd --display xvfb gui
 
 ### 描画
 
-既定は `LIBGL_ALWAYS_SOFTWARE=1` のソフトウェアレンダリング。移植性は最高だが
-大規模なデバイスビューは重い。GPU を使う場合:
+既定は `LIBGL_ALWAYS_SOFTWARE=1` によるソフトウェアレンダリングである。移植性が
+高い一方、大規模なデバイスビューでは描画が遅い。GPU を使用する場合は次のように
+指定する。
 
 ```sh
 vvd --gpu gui        # /dev/dri を渡す
 ```
 
-`/dev/dri` が無ければエラーになる。ホスト側の GPU ドライバとコンテナ内の Mesa の
-組み合わせによっては効果が出ないこともある。
+`/dev/dri` が存在しない場合はエラーとなる。ホスト側の GPU ドライバとコンテナ内の
+Mesa の組み合わせによっては、効果が得られない場合がある。
 
 ### フォント
 
-`fontconfig` と `fonts-dejavu-core` がイメージに入っているので、□ 文字化けは
-起きない。追加フォントが要る場合は `VVD_EXTRA_MOUNTS` でホストの
-`/usr/share/fonts` を mount する。
+`fontconfig` と `fonts-dejavu-core` をイメージに含めているため、豆腐文字の
+発生しない状態になっている。追加のフォントが必要な場合は、`VVD_EXTRA_MOUNTS` で
+ホストの `/usr/share/fonts` を mount する。
 
 ## 確認
 
 ```sh
-vvd doctor                      # ディスプレイ方式の判定結果
-vvd selftest --stage display    # コンテナ内から X に実際に接続できるか
+vvd doctor                      # ディスプレイ方式の判定結果を表示する
+vvd selftest --stage display    # コンテナ内から X に接続できるかを検証する
 ```
