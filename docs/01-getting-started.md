@@ -10,9 +10,6 @@
 Vivado をホストに入れたくない場合は
 [03 イメージ構築](03-image-build.md) の `image` モードを参照。
 
-コマンド名の `vvd` は Vivado の子音から。EDA 領域で `vcs` は Synopsys VCS
-(Verilog Compiler Simulator) の名前なので使っていない。
-
 ## 1. 取り込む
 
 サブモジュール (推奨。バージョンが commit で固定される):
