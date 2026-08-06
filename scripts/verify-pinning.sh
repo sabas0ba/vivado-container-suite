@@ -2,7 +2,7 @@
 # Fail if anything this repository depends on is not pinned by digest.
 #
 # Covers: base images, apt packages, the Vivado installer, CI actions and the
-# development tooling.  `vcs doctor` runs this, and so does CI on every push.
+# development tooling.  `vvd doctor` runs this, and so does CI on every push.
 set -uo pipefail
 
 
@@ -56,7 +56,7 @@ while IFS= read -r line; do
 done < <(grep -E '^FROM ' "$ROOT/docker/Dockerfile")
 
 # The ARG default and the lock must agree, or a plain `docker build` would use
-# a different base from `vcs build`.
+# a different base from `vvd build`.
 lock_base="$(grep -E '^base\|' "$ROOT/config/images.lock" | head -n1 | cut -d'|' -f2)"
 arg_base="$(grep -E '^ARG BASE_IMAGE=' "$ROOT/docker/Dockerfile" | head -n1 | cut -d= -f2-)"
 if [ "$lock_base" = "$arg_base" ]; then

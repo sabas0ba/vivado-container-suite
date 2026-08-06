@@ -3,15 +3,18 @@
 AMD Vivado の開発環境をコンテナに閉じ込め、**すべての操作を CLI から**行うためのツールキット。
 
 ```sh
-vcs build            # コンテナイメージを構築
-vcs sim              # 論理シミュレーション (xsim)
-vcs flow             # 合成 → 配置配線 → ビットストリーム
-vcs program          # JTAG 書き込み
-vcs tcl              # Tcl コンソール
-vcs gui              # Vivado IDE (X11 / XWayland / Xvfb)
-vcs doctor           # 環境診断
-vcs selftest         # 可用性テスト
+vvd build            # コンテナイメージを構築
+vvd sim              # 論理シミュレーション (xsim)
+vvd flow             # 合成 → 配置配線 → ビットストリーム
+vvd program          # JTAG 書き込み
+vvd tcl              # Tcl コンソール
+vvd gui              # Vivado IDE (X11 / XWayland / Xvfb)
+vvd doctor           # 環境診断
+vvd selftest         # 可用性テスト
 ```
+
+コマンド名は `vvd`（Vivado の子音）。EDA 領域で `vcs` は Synopsys VCS
+(Verilog Compiler Simulator) を指すため、避けている。
 
 ## 設計方針
 
@@ -28,8 +31,8 @@ vcs selftest         # 可用性テスト
 サブモジュールとして取り込む場合:
 
 ```sh
-git submodule add https://github.com/sabas0ba/vivado-container-suite.git tools/vcs
-ln -s tools/vcs/bin/vcs vcs        # あるいは PATH に通す
+git submodule add https://github.com/sabas0ba/vivado-container-suite.git tools/vvd
+ln -s tools/vvd/bin/vvd vvd        # あるいは PATH に通す
 ```
 
 単体で clone する場合:
@@ -39,16 +42,16 @@ git clone https://github.com/sabas0ba/vivado-container-suite.git
 export PATH="$PWD/vivado-container-suite/bin:$PATH"
 ```
 
-プロジェクト直下に `vcs.conf` を置けば準備完了。詳細は
+プロジェクト直下に `vvd.conf` を置けば準備完了。詳細は
 [docs/01-getting-started.md](docs/01-getting-started.md)。
 
 ```conf
-VCS_PART=xc7a35ticsg324-1L
-VCS_TOP=blinky
-VCS_SOURCES=rtl/*.v
-VCS_CONSTRAINTS=constr/*.xdc
-VCS_SIM_TOP=tb_blinky
-VCS_SIM_SOURCES=sim/*.v
+VVD_PART=xc7a35ticsg324-1L
+VVD_TOP=blinky
+VVD_SOURCES=rtl/*.v
+VVD_CONSTRAINTS=constr/*.xdc
+VVD_SIM_TOP=tb_blinky
+VVD_SIM_SOURCES=sim/*.v
 ```
 
 ## ドキュメント
@@ -56,7 +59,7 @@ VCS_SIM_SOURCES=sim/*.v
 | | |
 |---|---|
 | [01 はじめに](docs/01-getting-started.md) | 導入から最初のビットストリームまで |
-| [02 設定](docs/02-configuration.md) | `vcs.conf` の全キー |
+| [02 設定](docs/02-configuration.md) | `vvd.conf` の全キー |
 | [03 イメージ構築](docs/03-image-build.md) | mount モードと image モード |
 | [04 ライセンス](docs/04-licensing.md) | 注入方式と選び方 |
 | [05 フロー](docs/05-flows.md) | 合成・実装・シミュレーション |

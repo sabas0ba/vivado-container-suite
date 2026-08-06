@@ -3,11 +3,11 @@
 ## コマンド
 
 ```sh
-vcs synth       # 合成
-vcs impl        # 配置配線。合成済みチェックポイントが無ければ先に合成する
-vcs bitstream   # ビットストリーム。実装済みでなければ先に実装する
-vcs flow        # 上記すべてを Vivado 1 回の起動で
-vcs sim         # 論理シミュレーション
+vvd synth       # 合成
+vvd impl        # 配置配線。合成済みチェックポイントが無ければ先に合成する
+vvd bitstream   # ビットストリーム。実装済みでなければ先に実装する
+vvd flow        # 上記すべてを Vivado 1 回の起動で
+vvd sim         # 論理シミュレーション
 ```
 
 `flow` は Vivado の起動が 1 回で済むぶん速い (起動に 20〜40 秒かかる)。
@@ -35,20 +35,20 @@ sources ──synth_design──▶ post_synth.dcp ──opt/place/phys_opt/rout
 ### タイミング未達は失敗として扱う
 
 Vivado 自体はタイミング未達でも終了コード 0 を返す。CI ではこれが致命的なので、
-`vcs impl` は WNS/WHS が負なら**ビルドを失敗させる**。
+`vvd impl` は WNS/WHS が負なら**ビルドを失敗させる**。
 
 ```sh
-VCS_ALLOW_TIMING_VIOLATION=1 vcs impl     # 承知のうえで進める
+VVD_ALLOW_TIMING_VIOLATION=1 vvd impl     # 承知のうえで進める
 ```
 
 ### フック
 
 ```conf
-VCS_PRE_TCL=scripts/pre_synth.tcl     # ソース読み込み後、synth_design の前
-VCS_POST_TCL=scripts/post_bit.tcl     # write_bitstream の後
+VVD_PRE_TCL=scripts/pre_synth.tcl     # ソース読み込み後、synth_design の前
+VVD_POST_TCL=scripts/post_bit.tcl     # write_bitstream の後
 ```
 
-フックの中では `tcl/lib.tcl` のヘルパ (`vcs::env`, `vcs::build_dir`, ...) が
+フックの中では `tcl/lib.tcl` のヘルパ (`vvd::env`, `vvd::build_dir`, ...) が
 使える状態になっている。
 
 ## project フロー
@@ -56,8 +56,8 @@ VCS_POST_TCL=scripts/post_bit.tcl     # write_bitstream の後
 既存の `.xpr` が正であるプロジェクト向け。
 
 ```conf
-VCS_FLOW_MODE=project
-VCS_XPR=hw/blinky.xpr
+VVD_FLOW_MODE=project
+VVD_XPR=hw/blinky.xpr
 ```
 
 `launch_runs synth_1` / `launch_runs impl_1 -to_step write_bitstream` を駆動し、
@@ -67,11 +67,11 @@ VCS_XPR=hw/blinky.xpr
 ## シミュレーション
 
 ```sh
-vcs sim                       # ヘッドレス実行
-vcs sim --gui                 # xsim の波形ビューアを開く
-vcs sim --top tb_other        # トップを一時的に差し替え
-vcs sim --time 500us          # 実行時間
-vcs sim --no-waves            # 波形を記録しない (速い)
+vvd sim                       # ヘッドレス実行
+vvd sim --gui                 # xsim の波形ビューアを開く
+vvd sim --top tb_other        # トップを一時的に差し替え
+vvd sim --time 500us          # 実行時間
+vvd sim --no-waves            # 波形を記録しない (速い)
 ```
 
 Vivado プロジェクトを作らず `xvlog` / `xvhdl` / `xelab` / `xsim` を直接叩くので、
@@ -94,34 +94,34 @@ rootful docker では entrypoint が root から降格し、rootless podman で�
 `--userns=keep-id` が同じ結果を与える。
 
 ```sh
-vcs selftest --stage identity     # 実際に確認する
+vvd selftest --stage identity     # 実際に確認する
 ```
 
-`VCS_USER_MODE=root` にすると降格しない (デバッグ用。生成物が root 所有になる)。
+`VVD_USER_MODE=root` にすると降格しない (デバッグ用。生成物が root 所有になる)。
 
 ## 掃除
 
 ```sh
-vcs clean          # build/ を消す (確認あり)
-vcs clean -f       # 確認なし
-vcs clean --all    # ツールキャッシュも消す
+vvd clean          # build/ を消す (確認あり)
+vvd clean -f       # 確認なし
+vvd clean --all    # ツールキャッシュも消す
 ```
 
-`VCS_BUILD_DIR` が絶対パスや `..` を含む場合、`vcs clean` は拒否する。
+`VVD_BUILD_DIR` が絶対パスや `..` を含む場合、`vvd clean` は拒否する。
 
 ## 任意の Tcl を走らせる
 
 ```sh
-vcs run scripts/report_all.tcl              # vivado -mode batch -source
-vcs run scripts/sweep.tcl arg1 arg2         # -tclargs で渡る
-vcs tcl                                     # 対話コンソール
+vvd run scripts/report_all.tcl              # vivado -mode batch -source
+vvd run scripts/sweep.tcl arg1 arg2         # -tclargs で渡る
+vvd tcl                                     # 対話コンソール
 ```
 
 スクリプトはプロジェクトルート配下に無ければならない (コンテナから見えないため)。
 `tcl/lib.tcl` を `source` すればヘルパが使える。
 
 ```tcl
-source [file join $::env(VCS_CONTAINER_TCL) lib.tcl]
-vcs::read_sources
-vcs::info_ "part is [vcs::part]"
+source [file join $::env(VVD_CONTAINER_TCL) lib.tcl]
+vvd::read_sources
+vvd::info_ "part is [vvd::part]"
 ```

@@ -1,12 +1,12 @@
 # shellcheck shell=bash
 # Common setup for the bats suite.
 
-VCS_TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VCS_REPO_ROOT="$(cd "$VCS_TEST_DIR/.." && pwd)"
-export VCS_TEST_DIR VCS_REPO_ROOT
+VVD_TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VVD_REPO_ROOT="$(cd "$VVD_TEST_DIR/.." && pwd)"
+export VVD_TEST_DIR VVD_REPO_ROOT
 
 load_helpers() {
-  local tools="$VCS_REPO_ROOT/.tools"
+  local tools="$VVD_REPO_ROOT/.tools"
   if [ -d "$tools/bats-support" ]; then load "$tools/bats-support/load"; fi
   if [ -d "$tools/bats-assert" ];  then load "$tools/bats-assert/load"; fi
 }
@@ -21,22 +21,22 @@ setup_project() {
   mkdir -p "$PROJECT/rtl" "$PROJECT/sim" "$XILINX/Vivado/2025.2"
   : >"$XILINX/Vivado/2025.2/settings64.sh"
   : >"$PROJECT/rtl/top.v"
-  cat >"$PROJECT/vcs.conf" <<EOF
-VCS_TOP=top
-VCS_PART=xc7a35tcpg236-1
-VCS_SOURCES=rtl/*.v
-VCS_SIM_TOP=tb_top
-VCS_SIM_SOURCES=sim/*.v
+  cat >"$PROJECT/vvd.conf" <<EOF
+VVD_TOP=top
+VVD_PART=xc7a35tcpg236-1
+VVD_SOURCES=rtl/*.v
+VVD_SIM_TOP=tb_top
+VVD_SIM_SOURCES=sim/*.v
 EOF
 
-  export PATH="$VCS_TEST_DIR/fixtures/bin:$PATH"
-  export VCS_ENGINE=docker
-  export VCS_XILINX_ROOT="$XILINX"
-  export VCS_CACHE_DIR="$TMP/cache"
-  export VCS_DISPLAY_MODE=none
-  export VCS_JTAG_MODE=none
-  export VCS_LICENSE=none
-  export VCS_TEST_ARGV="$TMP/argv"
+  export PATH="$VVD_TEST_DIR/fixtures/bin:$PATH"
+  export VVD_ENGINE=docker
+  export VVD_XILINX_ROOT="$XILINX"
+  export VVD_CACHE_DIR="$TMP/cache"
+  export VVD_DISPLAY_MODE=none
+  export VVD_JTAG_MODE=none
+  export VVD_LICENSE=none
+  export VVD_TEST_ARGV="$TMP/argv"
   # Do not let the developer's own environment leak into the assertions.
   unset XILINXD_LICENSE_FILE DISPLAY WAYLAND_DISPLAY XDG_RUNTIME_DIR
   export HOME="$TMP/home"
@@ -49,12 +49,12 @@ teardown_project() {
 }
 
 # Run the CLI against the scratch project.
-vcs() {
-  "$VCS_REPO_ROOT/bin/vcs" -C "$PROJECT" "$@"
+vvd() {
+  "$VVD_REPO_ROOT/bin/vvd" -C "$PROJECT" "$@"
 }
 
 # The last recorded engine argv, one argument per line.
-argv_lines() { cat "$VCS_TEST_ARGV" 2>/dev/null; }
+argv_lines() { cat "$VVD_TEST_ARGV" 2>/dev/null; }
 
 # Mirror the CLI's own rendering, so assertions compare like with like.
 shellish() { # <word>

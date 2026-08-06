@@ -15,7 +15,7 @@ BATS       := $(TOOLS)/bin/bats
 SHELLCHECK := $(TOOLS)/bin/shellcheck
 HADOLINT   := $(TOOLS)/bin/hadolint
 
-SH_SOURCES := bin/vcs $(wildcard lib/*.sh) $(wildcard lib/cmd/*.sh) \
+SH_SOURCES := bin/vvd $(wildcard lib/*.sh) $(wildcard lib/cmd/*.sh) \
               $(wildcard scripts/*.sh) $(wildcard docker/*.sh) \
               $(wildcard container/*.sh) test/helper.bash test/fixtures/bin/docker
 
@@ -72,15 +72,15 @@ lock-check: ## Fail if a lock file is stale
 
 .PHONY: image
 image: ## Build the base container image
-	@./bin/vcs build
+	@./bin/vvd build
 
 .PHONY: selftest
 selftest: ## Run the in-container availability tests
-	@./bin/vcs selftest
+	@./bin/vvd selftest
 
 .PHONY: example
 example: ## Simulate the bundled example design
-	@./bin/vcs -C examples/blinky sim
+	@./bin/vvd -C examples/blinky sim
 
 .PHONY: clean
 clean: ## Remove build output and fetched tooling

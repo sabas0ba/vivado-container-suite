@@ -27,7 +27,7 @@ useradd --uid 1500 --gid 1500 --create-home --home-dir /home/vivado --shell /bin
 groupadd --system --gid 1501 plugdev 2>/dev/null || true
 usermod -aG plugdev vivado
 
-mkdir -p /work /opt/Xilinx /opt/vcs/license /opt/vcs/tcl /opt/vcs/lib
+mkdir -p /work /opt/Xilinx /opt/vvd/license /opt/vvd/tcl /opt/vvd/lib
 chown vivado:vivado /work /home/vivado
 
 

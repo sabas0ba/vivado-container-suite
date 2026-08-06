@@ -1,7 +1,7 @@
 ## Digilent Arty A7-35T.
 ##
 ## Adjust the pin assignments for your board; the timing constraint is what
-## actually matters to the flow, since `vcs impl` fails the build when timing
+## actually matters to the flow, since `vvd impl` fails the build when timing
 ## is not met.
 
 ## --- clock ------------------------------------------------------------------

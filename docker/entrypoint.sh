@@ -8,29 +8,29 @@
 #   4. exec the command
 set -euo pipefail
 
-log() { printf 'vcs-container: %s\n' "$*" >&2; }
-dbg() { [ "${VCS_LOG_LEVEL:-info}" = "debug" ] && log "$*"; return 0; }
+log() { printf 'vvd-container: %s\n' "$*" >&2; }
+dbg() { [ "${VVD_LOG_LEVEL:-info}" = "debug" ] && log "$*"; return 0; }
 fail() { log "ERROR: $*"; exit 1; }
 
 # --------------------------------------------------------------------------
 # 1. privilege drop
 # --------------------------------------------------------------------------
-if [ "$(id -u)" -eq 0 ] && [ -n "${VCS_UID:-}" ] && [ "${VCS_PRIVDROPPED:-0}" != "1" ]; then
-  uid="$VCS_UID"; gid="${VCS_GID:-$VCS_UID}"
+if [ "$(id -u)" -eq 0 ] && [ -n "${VVD_UID:-}" ] && [ "${VVD_PRIVDROPPED:-0}" != "1" ]; then
+  uid="$VVD_UID"; gid="${VVD_GID:-$VVD_UID}"
   if [ "$uid" -ne 0 ]; then
     if ! getent group "$gid" >/dev/null; then
-      groupadd --gid "$gid" vcsgroup
+      groupadd --gid "$gid" vvdgroup
     fi
     if ! getent passwd "$uid" >/dev/null; then
       useradd --uid "$uid" --gid "$gid" --no-create-home \
-              --home-dir "${HOME:-/home/vivado}" --shell /bin/bash vcsuser
+              --home-dir "${HOME:-/home/vivado}" --shell /bin/bash vvduser
     fi
     # plugdev membership is what makes a passed-through JTAG node openable.
     if getent group plugdev >/dev/null; then
       usermod -aG plugdev "$(getent passwd "$uid" | cut -d: -f1)" || true
     fi
     dbg "dropping privileges to ${uid}:${gid}"
-    export VCS_PRIVDROPPED=1
+    export VVD_PRIVDROPPED=1
     exec setpriv --reuid="$uid" --regid="$gid" --init-groups --inh-caps=-all \
          -- "$0" "$@"
   fi
@@ -43,9 +43,9 @@ export HOME="${HOME:-/home/vivado}"
 # --------------------------------------------------------------------------
 # 2. Vivado environment
 # --------------------------------------------------------------------------
-xroot="${VCS_CONTAINER_XILINX_ROOT:-/opt/Xilinx}"
-edition="${VCS_VIVADO_EDITION:-${VIVADO_EDITION:-Vivado}}"
-version="${VCS_VIVADO_VERSION:-${VIVADO_VERSION:-2025.2}}"
+xroot="${VVD_CONTAINER_XILINX_ROOT:-/opt/Xilinx}"
+edition="${VVD_VIVADO_EDITION:-${VIVADO_EDITION:-Vivado}}"
+version="${VVD_VIVADO_VERSION:-${VIVADO_VERSION:-2025.2}}"
 settings="$xroot/$edition/$version/settings64.sh"
 
 if [ -f "$settings" ]; then
@@ -55,13 +55,13 @@ if [ -f "$settings" ]; then
   # shellcheck source=/dev/null
   . "$settings"
   set -u
-  export VCS_VIVADO_READY=1
+  export VVD_VIVADO_READY=1
 else
-  export VCS_VIVADO_READY=0
-  if [ "${VCS_REQUIRE_VIVADO:-1}" = "1" ] && [ "${VCS_VIVADO_MODE:-mount}" != "none" ]; then
+  export VVD_VIVADO_READY=0
+  if [ "${VVD_REQUIRE_VIVADO:-1}" = "1" ] && [ "${VVD_VIVADO_MODE:-mount}" != "none" ]; then
     log "WARNING: $settings not found -- Vivado is not on PATH."
-    log "         mount mode: check VCS_XILINX_ROOT and VCS_VIVADO_VERSION on the host"
-    log "         image mode: rebuild with 'vcs build --installer <tarball>'"
+    log "         mount mode: check VVD_XILINX_ROOT and VVD_VIVADO_VERSION on the host"
+    log "         image mode: rebuild with 'vvd build --installer <tarball>'"
   fi
 fi
 
@@ -70,8 +70,8 @@ export XILINX_LOCAL_USER_DATA="${XILINX_LOCAL_USER_DATA:-no}"
 mkdir -p "$HOME/.Xilinx" 2>/dev/null || true
 
 # Where the flows write.  Vivado will not create a log directory for itself.
-if [ -n "${VCS_BUILD_DIR:-}" ] && [ -w /work ]; then
-  mkdir -p "/work/${VCS_BUILD_DIR}/logs" 2>/dev/null || true
+if [ -n "${VVD_BUILD_DIR:-}" ] && [ -w /work ]; then
+  mkdir -p "/work/${VVD_BUILD_DIR}/logs" 2>/dev/null || true
 fi
 
 # --------------------------------------------------------------------------
@@ -86,13 +86,13 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-if [ "${VCS_DISPLAY_MODE:-none}" = "xvfb" ]; then
+if [ "${VVD_DISPLAY_MODE:-none}" = "xvfb" ]; then
   display_num=99
   while [ -e "/tmp/.X11-unix/X${display_num}" ] && [ "$display_num" -lt 120 ]; do
     display_num=$((display_num + 1))
   done
   dbg "starting Xvfb on :${display_num}"
-  Xvfb ":${display_num}" -screen 0 "${VCS_XVFB_GEOMETRY:-1920x1080x24}" -nolisten tcp >/dev/null 2>&1 &
+  Xvfb ":${display_num}" -screen 0 "${VVD_XVFB_GEOMETRY:-1920x1080x24}" -nolisten tcp >/dev/null 2>&1 &
   _shutdown_pids+=("$!")
   export DISPLAY=":${display_num}"
   for _ in $(seq 1 50); do
@@ -105,15 +105,15 @@ if [ "${VCS_DISPLAY_MODE:-none}" = "xvfb" ]; then
   # still show the GUI.  The password comes from a mounted file, never from the
   # environment or the command line, both of which are readable by anyone who
   # can inspect the container.
-  if [ "${VCS_VNC:-0}" = "1" ]; then
+  if [ "${VVD_VNC:-0}" = "1" ]; then
     command -v x11vnc >/dev/null 2>&1 ||
-      fail "VCS_VNC=1 but x11vnc is not in the image; rebuild with 'vcs build'"
-    [ -s /opt/vcs/vnc-password ] ||
-      fail "VCS_VNC=1 but /opt/vcs/vnc-password is missing or empty"
+      fail "VVD_VNC=1 but x11vnc is not in the image; rebuild with 'vvd build'"
+    [ -s /opt/vvd/vnc-password ] ||
+      fail "VVD_VNC=1 but /opt/vvd/vnc-password is missing or empty"
     dbg "starting x11vnc on $DISPLAY"
     x11vnc -display "$DISPLAY" \
            -rfbport 5900 \
-           -passwdfile /opt/vcs/vnc-password \
+           -passwdfile /opt/vvd/vnc-password \
            -forever -shared -noxdamage -quiet >/dev/null 2>&1 &
     _shutdown_pids+=("$!")
     for _ in $(seq 1 100); do
@@ -126,9 +126,9 @@ if [ "${VCS_DISPLAY_MODE:-none}" = "xvfb" ]; then
   fi
 fi
 
-if [ "${VCS_START_HW_SERVER:-0}" = "1" ] && [ "${1:-}" != "hw_server" ]; then
+if [ "${VVD_START_HW_SERVER:-0}" = "1" ] && [ "${1:-}" != "hw_server" ]; then
   if command -v hw_server >/dev/null 2>&1; then
-    port="${VCS_HW_SERVER_PORT:-3121}"
+    port="${VVD_HW_SERVER_PORT:-3121}"
     dbg "starting hw_server on TCP::${port}"
     hw_server -s "TCP::${port}" -d >/dev/null 2>&1 &
     _shutdown_pids+=("$!")
@@ -137,7 +137,7 @@ if [ "${VCS_START_HW_SERVER:-0}" = "1" ] && [ "${1:-}" != "hw_server" ]; then
       sleep 0.1
     done
   else
-    log "WARNING: VCS_START_HW_SERVER=1 but hw_server is not on PATH"
+    log "WARNING: VVD_START_HW_SERVER=1 but hw_server is not on PATH"
   fi
 fi
 

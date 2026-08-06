@@ -1,4 +1,4 @@
-// Smoke design for `vcs selftest`.
+// Smoke design for `vvd selftest`.
 //
 // Deliberately tiny and vendor-neutral: it must synthesise on any 7-series or
 // newer part with a WebPACK-class (free) license, so the selftest measures the

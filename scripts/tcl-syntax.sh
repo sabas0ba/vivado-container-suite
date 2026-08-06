@@ -10,7 +10,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # `info complete` rejects unbalanced braces, brackets and quotes without needing
 # Vivado's command set, which is the class of error a lint can actually catch
-# here.  Semantic checking of Vivado commands happens in `vcs selftest`.
+# here.  Semantic checking of Vivado commands happens in `vvd selftest`.
 # shellcheck disable=SC2016  # this is Tcl, not shell
 CHECK='
 foreach f $argv {
@@ -32,16 +32,16 @@ fi
 
 engine=""
 for e in podman docker; do command -v "$e" >/dev/null 2>&1 && { engine="$e"; break; }; done
-image="${VCS_IMAGE:-vivado-container-suite:${VCS_VIVADO_VERSION:-2025.2}-base}"
+image="${VVD_IMAGE:-vivado-container-suite:${VVD_VIVADO_VERSION:-2025.2}-base}"
 
 if [ -n "$engine" ] && "$engine" image inspect "$image" >/dev/null 2>&1; then
   rel=()
-  for f in "${files[@]}"; do rel+=("/opt/vcs/tcl/$(basename "$f")"); done
+  for f in "${files[@]}"; do rel+=("/opt/vvd/tcl/$(basename "$f")"); done
   printf '%s' "$CHECK" >"$ROOT/.tcl-syntax.tcl"
   trap 'rm -f "$ROOT/.tcl-syntax.tcl"' EXIT
   exec "$engine" run --rm \
     --entrypoint tclsh \
-    -v "$ROOT/tcl:/opt/vcs/tcl:ro" \
+    -v "$ROOT/tcl:/opt/vvd/tcl:ro" \
     -v "$ROOT/.tcl-syntax.tcl:/tmp/check.tcl:ro" \
     "$image" /tmp/check.tcl "${rel[@]}"
 fi

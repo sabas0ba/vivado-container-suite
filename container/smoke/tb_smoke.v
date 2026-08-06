@@ -60,8 +60,8 @@ module tb_smoke;
         #1;
         check("counter wraps to zero", count, 0);
 
-        if (errors == 0) $display("vcs-smoke: PASS");
-        else             $display("vcs-smoke: %0d error(s)", errors);
+        if (errors == 0) $display("vvd-smoke: PASS");
+        else             $display("vvd-smoke: %0d error(s)", errors);
         $finish;
     end
 

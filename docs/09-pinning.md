@@ -15,7 +15,7 @@
 | GitHub Actions | commit SHA | `.github/workflows/*.yml` |
 
 ```sh
-scripts/verify-pinning.sh     # すべて固定されているか検査 (CI と vcs doctor が実行)
+scripts/verify-pinning.sh     # すべて固定されているか検査 (CI と vvd doctor が実行)
 ```
 
 ## apt スナップショットが要点
@@ -44,7 +44,7 @@ sha256 は監査用。
 
 `snapshot.ubuntu.com` は HTTPS 専用で、`ubuntu:24.04` はルート証明書を持たない。
 最初の TLS 接続を張るための証明書束だけは、ピン留め前のアーカイブから取得する
-`ca-bootstrap` ステージで作る。この束は `/opt/vcs/pin/ca-bootstrap.crt` に置かれ、
+`ca-bootstrap` ステージで作る。この束は `/opt/vvd/pin/ca-bootstrap.crt` に置かれ、
 **それを使った同じレイヤ内で削除される**。最終イメージに残るものは何もない。
 
 パッケージの完全性はこれに依存しない。apt の GPG 連鎖はバイト列の届き方と無関係に
@@ -73,7 +73,7 @@ scripts/lock-images.sh --check    # ドリフト検査
 
 `docker/Dockerfile` の `ARG BASE_IMAGE` の既定値と `config/images.lock` の
 `base` エントリが一致しているかも検査される。素の `docker build` と
-`vcs build` が別のベースを使う、という事故を防ぐため。
+`vvd build` が別のベースを使う、という事故を防ぐため。
 
 ## Vivado インストーラ
 
@@ -89,8 +89,8 @@ sha256sum FPGAs_AdaptiveSoCs_Unified_SDI_2025.2_1030_1755.tar
 2025.2|FPGAs_AdaptiveSoCs_Unified_SDI_2025.2_1030_1755.tar|<sha256>
 ```
 
-照合は 2 か所で行う。`vcs build` がホスト側で (ビルドを始める前に)、
-`docker/install-vivado.sh` がイメージ内で。`vcs` 以外から `docker build` を
+照合は 2 か所で行う。`vvd build` がホスト側で (ビルドを始める前に)、
+`docker/install-vivado.sh` がイメージ内で。`vvd` 以外から `docker build` を
 叩いた場合でも、未検証のインストーラは通らない。
 
 ## 開発ツール
@@ -129,5 +129,5 @@ git の commit ID は内容アドレスなので、リリース tarball より�
 ```sh
 scripts/verify-pinning.sh     # 固定されているか
 make lock-check               # ロックファイルが最新か
-vcs doctor                    # 上記を含む環境全体
+vvd doctor                    # 上記を含む環境全体
 ```

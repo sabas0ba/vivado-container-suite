@@ -2,7 +2,7 @@
 
 ## 3 つの転送方式
 
-`--jtag` / `VCS_JTAG_MODE`:
+`--jtag` / `VVD_JTAG_MODE`:
 
 | 値 | `hw_server` の場所 | コンテナに渡す権限 |
 |---|---|---|
@@ -25,8 +25,8 @@ hw_server &
 ```
 
 ```sh
-vcs program                    # 既定でこの経路を使う
-vcs program --list             # スキャンチェーンの列挙だけ
+vvd program                    # 既定でこの経路を使う
+vvd program --list             # スキャンチェーンの列挙だけ
 ```
 
 コンテナ内からは `host.docker.internal` (docker) /
@@ -37,8 +37,8 @@ vcs program --list             # スキャンチェーンの列挙だけ
 動かして、その口を公開できる:
 
 ```sh
-vcs hw-server                       # 127.0.0.1:3121 で待ち受け
-vcs hw-server --bind 0.0.0.0        # 他マシンからも (要注意: 誰でも書き込める)
+vvd hw-server                       # 127.0.0.1:3121 で待ち受け
+vvd hw-server --bind 0.0.0.0        # 他マシンからも (要注意: 誰でも書き込める)
 ```
 
 ## remote モード
@@ -46,13 +46,13 @@ vcs hw-server --bind 0.0.0.0        # 他マシンからも (要注意: 誰で�
 ラボの共有マシンや CI のハードウェアランナーに繋ぐ。
 
 ```sh
-vcs --jtag remote:lab-01.example.com:3121 program
+vvd --jtag remote:lab-01.example.com:3121 program
 ```
 
 ```conf
-# vcs.local.conf
-VCS_JTAG_MODE=remote:lab-01.example.com
-VCS_HW_SERVER_PORT=3121
+# vvd.local.conf
+VVD_JTAG_MODE=remote:lab-01.example.com
+VVD_HW_SERVER_PORT=3121
 ```
 
 ## usb モード
@@ -60,7 +60,7 @@ VCS_HW_SERVER_PORT=3121
 ケーブルをコンテナに直接渡す。手軽だが、`host` モードより権限が広い。
 
 ```sh
-vcs --jtag usb program
+vvd --jtag usb program
 ```
 
 `lsusb` を見て、既知のベンダ ID を持つデバイスの
@@ -78,7 +78,7 @@ vcs --jtag usb program
 明示的に USB ツリー全体を渡す:
 
 ```sh
-VCS_JTAG_USB_ALL=1 vcs --jtag usb program     # 全 USB デバイスが見える。警告が出る
+VVD_JTAG_USB_ALL=1 vvd --jtag usb program     # 全 USB デバイスが見える。警告が出る
 ```
 
 ### udev ルール
@@ -87,9 +87,9 @@ VCS_JTAG_USB_ALL=1 vcs --jtag usb program     # 全 USB デバイスが見える
 これがあるおかげで Vivado もコンテナも root で動かす必要がなくなる。
 
 ```sh
-vcs jtag-rules --print     # 内容を確認
-vcs jtag-rules --install   # /etc/udev/rules.d/ に導入 (sudo)
-vcs jtag-rules --list      # 今つながっているケーブル
+vvd jtag-rules --print     # 内容を確認
+vvd jtag-rules --install   # /etc/udev/rules.d/ に導入 (sudo)
+vvd jtag-rules --list      # 今つながっているケーブル
 ```
 
 導入したらケーブルを挿し直す。ルールは `uaccess` タグ (ローカルログイン
@@ -99,11 +99,11 @@ vcs jtag-rules --list      # 今つながっているケーブル
 ## 書き込む
 
 ```sh
-vcs program                                 # build/<top>.bit
-vcs program --bit build/other.bit
-vcs program --target xc7a35t_0              # スキャンチェーンに複数デバイスがある場合
-vcs program --probes build/blinky.ltx       # ILA/VIO のプローブ
-vcs program --list                          # 列挙のみ
+vvd program                                 # build/<top>.bit
+vvd program --bit build/other.bit
+vvd program --target xc7a35t_0              # スキャンチェーンに複数デバイスがある場合
+vvd program --probes build/blinky.ltx       # ILA/VIO のプローブ
+vvd program --list                          # 列挙のみ
 ```
 
 `tcl/program.tcl` が `connect_hw_server` → `open_hw_target` →
@@ -113,19 +113,19 @@ vcs program --list                          # 列挙のみ
 ## 確認
 
 ```sh
-vcs doctor                   # hw_server の待ち受け、ケーブル、パーミッション
-vcs selftest --stage jtag    # 実際に接続してスキャンチェーンを読む
+vvd doctor                   # hw_server の待ち受け、ケーブル、パーミッション
+vvd selftest --stage jtag    # 実際に接続してスキャンチェーンを読む
 ```
 
-`vcs selftest` の JTAG ステージは、ケーブルが無い・`hw_server` が居ない場合は
+`vvd selftest` の JTAG ステージは、ケーブルが無い・`hw_server` が居ない場合は
 失敗ではなく **skip** になる。ハードウェアの有無で CI が壊れないようにするため。
 
 ## よくある失敗
 
 | 症状 | 対処 |
 |---|---|
-| `cannot reach hw_server at TCP:host.docker.internal:3121` | ホストで `hw_server` が動いていない。`vcs doctor` が教える |
+| `cannot reach hw_server at TCP:host.docker.internal:3121` | ホストで `hw_server` が動いていない。`vvd doctor` が教える |
 | `no JTAG target is attached` | ケーブル・ボード電源・udev ルールを確認 |
-| `no JTAG cable found on the USB bus` | `vcs jtag-rules --list` で認識を確認。挿し直したら再起動 |
+| `no JTAG cable found on the USB bus` | `vvd jtag-rules --list` で認識を確認。挿し直したら再起動 |
 | 抜き差し後に動かない (usb モード) | デバイス番号が変わった。コンテナを起動し直す |
-| 権限エラー | `vcs jtag-rules --install` の後、ケーブルを挿し直す |
+| 権限エラー | `vvd jtag-rules --install` の後、ケーブルを挿し直す |

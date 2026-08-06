@@ -6,14 +6,14 @@ Tcl コンソールと GUI はどちらも同じイメージ・同じマウン�
 ## Tcl コンソール
 
 ```sh
-vcs tcl
+vvd tcl
 ```
 
 `vivado -mode tcl` が対話モードで立ち上がる。ディスプレイは不要。
 
 ```tcl
-Vivado% source $env(VCS_CONTAINER_TCL)/lib.tcl
-Vivado% vcs::read_sources
+Vivado% source $env(VVD_CONTAINER_TCL)/lib.tcl
+Vivado% vvd::read_sources
 Vivado% synth_design -top blinky -part xc7a35ticsg324-1L
 Vivado% report_utilization
 Vivado% exit
@@ -22,22 +22,22 @@ Vivado% exit
 バッチ実行:
 
 ```sh
-vcs run scripts/analyze.tcl
-vcs run scripts/sweep.tcl 100 200 400      # -tclargs として渡る
+vvd run scripts/analyze.tcl
+vvd run scripts/sweep.tcl 100 200 400      # -tclargs として渡る
 ```
 
 ## GUI
 
 ```sh
-vcs gui                          # 空の IDE
-vcs gui hw/blinky.xpr            # プロジェクトを開く
-vcs gui build/post_route.dcp     # チェックポイントを開く (nonproject フローの定石)
-vcs sim --gui                    # xsim の波形ビューア
+vvd gui                          # 空の IDE
+vvd gui hw/blinky.xpr            # プロジェクトを開く
+vvd gui build/post_route.dcp     # チェックポイントを開く (nonproject フローの定石)
+vvd sim --gui                    # xsim の波形ビューア
 ```
 
 ### ディスプレイ方式
 
-`--display` / `VCS_DISPLAY_MODE`:
+`--display` / `VVD_DISPLAY_MODE`:
 
 | 値 | 動作 |
 |---|---|
@@ -45,11 +45,11 @@ vcs sim --gui                    # xsim の波形ビューア
 | `x11` | X ソケット、または ssh 転送された TCP ディスプレイ。実行ごとの untrusted な xauth cookie を渡す |
 | `wayland` | XWayland の X ソケット経由。実体は `x11` と同じ |
 | `xvfb` | コンテナ内で Xvfb を起動。`--vnc` を付ければ VNC で見られる |
-| `none` | ディスプレイなし。`vcs gui` は理由付きで拒否する |
+| `none` | ディスプレイなし。`vvd gui` は理由付きで拒否する |
 
 ### X11
 
-`vcs` は実行のたびに `xauth nlist | sed 's/^..../ffff/' | xauth nmerge` で
+`vvd` は実行のたびに `xauth nlist | sed 's/^..../ffff/' | xauth nmerge` で
 **untrusted な使い捨て cookie** を作り、それだけをコンテナに渡す。
 `xhost +local:` のようにアクセス制御を丸ごと開ける必要はなく、
 cookie ファイルはコマンド終了時に消える。
@@ -67,17 +67,17 @@ xhost +SI:localuser:$(id -un)     # 自分のユーザだけ許可する
 でホストの 127.0.0.1 だけを listen するため、ブリッジネットワークのコンテナからは
 どのゲートウェイアドレスでも届かない。
 
-そこで `vcs` は `DISPLAY` が TCP 形式のときに自動でホストネットワーク
+そこで `vvd` は `DISPLAY` が TCP 形式のときに自動でホストネットワーク
 (`--network host`) を使う。X ソケットの mount は行わず、xauth cookie の扱いは同じ。
 
 ```sh
 ssh -X buildserver
-vcs gui                 # そのまま動く。--network host が自動で付く
+vvd gui                 # そのまま動く。--network host が自動で付く
 ```
 
 このとき `--jtag host` の接続先も `host.docker.internal` から `localhost` に
 切り替わる (ホストのネットワーク名前空間を共有しているため)。
-`VCS_NETWORK` を別の値に設定している場合は競合を警告する。
+`VVD_NETWORK` を別の値に設定している場合は競合を警告する。
 
 `DISPLAY` がリモートの X サーバ (`10.20.30.40:0` など) を指している場合は、
 コンテナから普通に到達できるので何も特別なことはしない。
@@ -94,16 +94,16 @@ Vivado は X11 専用の Qt を同梱しているため、Wayland ネイティ�
 X サーバが全く無いマシンで GUI を使う場合。
 
 ```sh
-vcs gui --vnc                        # 127.0.0.1:5901 に公開
-vcs gui --vnc --vnc-port 5999        # ポートを変える
-vcs sim --vnc                        # 波形ビューアを VNC で
+vvd gui --vnc                        # 127.0.0.1:5901 に公開
+vvd gui --vnc --vnc-port 5999        # ポートを変える
+vvd sim --vnc                        # 波形ビューアを VNC で
 ```
 
 コンテナ内で Xvfb が `:99` 以降の空き番号に立ち上がり (解像度は
-`VCS_XVFB_GEOMETRY`、既定 `1920x1080x24`)、x11vnc がそれを公開する。
+`VVD_XVFB_GEOMETRY`、既定 `1920x1080x24`)、x11vnc がそれを公開する。
 
 **既定で 127.0.0.1 のみに公開し、パスワードを必須にする。** パスワードは
-指定が無ければ 1 回限りのものを生成して表示する。`VCS_VNC_PASSWORD` で自分の
+指定が無ければ 1 回限りのものを生成して表示する。`VVD_VNC_PASSWORD` で自分の
 ものを指定してもよい。
 
 パスワードは**環境変数にも引数にも入れない** — どちらも `docker inspect` や
@@ -124,7 +124,7 @@ VNC を使わず Xvfb だけを起動することもできる (GUI が起動す�
 CI で確認したい場合など)。
 
 ```sh
-vcs --display xvfb gui
+vvd --display xvfb gui
 ```
 
 ### 描画
@@ -133,7 +133,7 @@ vcs --display xvfb gui
 大規模なデバイスビューは重い。GPU を使う場合:
 
 ```sh
-vcs --gpu gui        # /dev/dri を渡す
+vvd --gpu gui        # /dev/dri を渡す
 ```
 
 `/dev/dri` が無ければエラーになる。ホスト側の GPU ドライバとコンテナ内の Mesa の
@@ -142,12 +142,12 @@ vcs --gpu gui        # /dev/dri を渡す
 ### フォント
 
 `fontconfig` と `fonts-dejavu-core` がイメージに入っているので、□ 文字化けは
-起きない。追加フォントが要る場合は `VCS_EXTRA_MOUNTS` でホストの
+起きない。追加フォントが要る場合は `VVD_EXTRA_MOUNTS` でホストの
 `/usr/share/fonts` を mount する。
 
 ## 確認
 
 ```sh
-vcs doctor                      # ディスプレイ方式の判定結果
-vcs selftest --stage display    # コンテナ内から X に実際に接続できるか
+vvd doctor                      # ディスプレイ方式の判定結果
+vvd selftest --stage display    # コンテナ内から X に実際に接続できるか
 ```

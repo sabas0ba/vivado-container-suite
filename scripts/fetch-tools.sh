@@ -8,7 +8,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOCK="$ROOT/scripts/tools.lock"
-DEST="${VCS_TOOLS_DIR:-$ROOT/.tools}"
+DEST="${VVD_TOOLS_DIR:-$ROOT/.tools}"
 
 log() { printf 'fetch-tools: %s\n' "$*" >&2; }
 

@@ -5,7 +5,7 @@
 .tools/
 **/build/
 **/*.lic
-**/vcs.local.conf
+**/vvd.local.conf
 **/.Xil/
 **/xsim.dir/
 docs/

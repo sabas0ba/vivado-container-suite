@@ -30,7 +30,7 @@ EOF
 rm -f /etc/apt/sources.list
 
 # The bootstrap trust store exists only for this step; see the Dockerfile.
-cat >/etc/apt/apt.conf.d/99vcs <<EOF
+cat >/etc/apt/apt.conf.d/99vvd <<EOF
 Acquire::Check-Valid-Until "false";
 Acquire::Retries "5";
 Acquire::https::CaInfo "${BOOTSTRAP_CA}";
@@ -55,7 +55,7 @@ apt-get install -y --no-install-recommends "${pkgs[@]}"
 [ -s /etc/ssl/certs/ca-certificates.crt ] ||
   { echo "install-packages: the pinned ca-certificates did not populate the trust store" >&2; exit 1; }
 rm -f "$BOOTSTRAP_CA"
-cat >/etc/apt/apt.conf.d/99vcs <<'EOF'
+cat >/etc/apt/apt.conf.d/99vvd <<'EOF'
 Acquire::Check-Valid-Until "false";
 Acquire::Retries "5";
 EOF

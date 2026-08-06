@@ -15,14 +15,14 @@
 Vivado の入っていない CI ランナーでコンテナ自体を検証するためのもの
 ([08 CI](08-ci.md))。
 
-バージョン切り替えはどちらのモードでも `--vivado` / `VCS_VIVADO_VERSION` で行う。
+バージョン切り替えはどちらのモードでも `--vivado` / `VVD_VIVADO_VERSION` で行う。
 `mount` モードでは、指定バージョンがホストに無ければコンテナ起動前にエラーになり、
 存在するバージョンの一覧が表示される。
 
 ## mount モード
 
 ```sh
-vcs build
+vvd build
 ```
 
 `docker/Dockerfile` の `base` ステージだけを作る。中身は:
@@ -34,7 +34,7 @@ vcs build
 - 権限降格を行う entrypoint
 - ロケール、`/work`、`/opt/Xilinx` マウントポイント
 
-実行時に `$VCS_XILINX_ROOT` が `/opt/Xilinx` に read-only で mount され、
+実行時に `$VVD_XILINX_ROOT` が `/opt/Xilinx` に read-only で mount され、
 entrypoint が `settings64.sh` を読み込む。
 
 ## image モード
@@ -55,10 +55,10 @@ sha256sum FPGAs_AdaptiveSoCs_Unified_SDI_2025.2_1030_1755.tar
 ビルドする:
 
 ```sh
-vcs build --installer ~/Downloads/FPGAs_AdaptiveSoCs_Unified_SDI_2025.2_1030_1755.tar
+vvd build --installer ~/Downloads/FPGAs_AdaptiveSoCs_Unified_SDI_2025.2_1030_1755.tar
 ```
 
-`vcs build` はビルド開始前にホスト側で SHA256 を照合し、
+`vvd build` はビルド開始前にホスト側で SHA256 を照合し、
 `docker/install-vivado.sh` がイメージ内でもう一度照合する。記録が無い、
 あるいは一致しないインストーラではビルドが始まらない。
 
@@ -69,7 +69,7 @@ vcs build --installer ~/Downloads/FPGAs_AdaptiveSoCs_Unified_SDI_2025.2_1030_175
 以降は Vivado がイメージに入っているので:
 
 ```conf
-VCS_VIVADO_MODE=image
+VVD_VIVADO_MODE=image
 ```
 
 ### インストールされる構成
@@ -83,7 +83,7 @@ VCS_VIVADO_MODE=image
 
 `snapshot.ubuntu.com` は HTTPS 専用で、`ubuntu:24.04` はルート証明書を持たない。
 そのため Dockerfile には `ca-bootstrap` ステージがあり、最初の TLS 接続に使う
-証明書束だけをそこで作って `/opt/vcs/pin/ca-bootstrap.crt` に置き、
+証明書束だけをそこで作って `/opt/vvd/pin/ca-bootstrap.crt` に置き、
 **それを使った同じレイヤ内で削除する**。標準の証明書ディレクトリには一切触れず、
 最終イメージの信頼ストアはピン留めされた `ca-certificates` パッケージだけが作る。
 
@@ -94,12 +94,12 @@ VCS_VIVADO_MODE=image
 TLS を検査するプロキシの内側でビルドする場合は、その CA を渡す:
 
 ```sh
-vcs build --ca-cert /etc/ssl/certs/corporate-proxy.crt
+vvd build --ca-cert /etc/ssl/certs/corporate-proxy.crt
 ```
 
 この証明書もビルド中だけ信頼され、イメージの実行時信頼ストアには入らない。
 
-## `vcs build` のオプション
+## `vvd build` のオプション
 
 ```
 --installer TARBALL  image モードでビルド (上記)
@@ -112,8 +112,8 @@ vcs build --ca-cert /etc/ssl/certs/corporate-proxy.crt
 ## 事前ビルド済みイメージの取得
 
 ```sh
-vcs pull                                  # config/images.lock の prebuilt を取得
-vcs pull registry.example.com/vcs@sha256:...
+vvd pull                                  # config/images.lock の prebuilt を取得
+vvd pull registry.example.com/vvd@sha256:...
 ```
 
 ダイジェスト固定されていない参照は拒否される。タグを引いてしまうと

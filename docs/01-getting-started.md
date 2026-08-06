@@ -10,27 +10,30 @@
 Vivado をホストに入れたくない場合は
 [03 イメージ構築](03-image-build.md) の `image` モードを参照。
 
+コマンド名の `vvd` は Vivado の子音から。EDA 領域で `vcs` は Synopsys VCS
+(Verilog Compiler Simulator) の名前なので使っていない。
+
 ## 1. 取り込む
 
 サブモジュール (推奨。バージョンが commit で固定される):
 
 ```sh
-git submodule add https://github.com/sabas0ba/vivado-container-suite.git tools/vcs
+git submodule add https://github.com/sabas0ba/vivado-container-suite.git tools/vvd
 git config --local submodule.recurse true
-ln -s tools/vcs/bin/vcs vcs
+ln -s tools/vvd/bin/vvd vvd
 ```
 
 単体 clone:
 
 ```sh
-git clone https://github.com/sabas0ba/vivado-container-suite.git ~/src/vcs
-export PATH="$HOME/src/vcs/bin:$PATH"       # ~/.bashrc などに追記
+git clone https://github.com/sabas0ba/vivado-container-suite.git ~/src/vvd
+export PATH="$HOME/src/vvd/bin:$PATH"       # ~/.bashrc などに追記
 ```
 
 ## 2. イメージを構築する
 
 ```sh
-vcs build
+vvd build
 ```
 
 Ubuntu 24.04 の固定スナップショットから、Vivado の実行に必要な共有ライブラリ一式を
@@ -40,38 +43,38 @@ Ubuntu 24.04 の固定スナップショットから、Vivado の実行に必要
 ## 3. 環境を確認する
 
 ```sh
-vcs doctor
+vvd doctor
 ```
 
 ホスト、コンテナエンジン、イメージ、Vivado の所在、ライセンス、ディスプレイ、JTAG、
 ピン留めをまとめて検査する。`FAIL` があれば、そこに対処法が出る。
 
 ```sh
-vcs doctor --deep      # コンテナを実際に起動して中身も検査する
+vvd doctor --deep      # コンテナを実際に起動して中身も検査する
 ```
 
 ## 4. プロジェクトを設定する
 
-プロジェクトのルートに `vcs.conf` を置く。`vcs` はカレントディレクトリから親を
-遡って `vcs.conf` を探すので、サブディレクトリからでも動く。
+プロジェクトのルートに `vvd.conf` を置く。`vvd` はカレントディレクトリから親を
+遡って `vvd.conf` を探すので、サブディレクトリからでも動く。
 
 ```conf
-VCS_PART=xc7a35ticsg324-1L
-VCS_TOP=blinky
-VCS_SOURCES=rtl/*.v
-VCS_CONSTRAINTS=constr/*.xdc
+VVD_PART=xc7a35ticsg324-1L
+VVD_TOP=blinky
+VVD_SOURCES=rtl/*.v
+VVD_CONSTRAINTS=constr/*.xdc
 
-VCS_SIM_TOP=tb_blinky
-VCS_SIM_SOURCES=sim/*.v
+VVD_SIM_TOP=tb_blinky
+VVD_SIM_SOURCES=sim/*.v
 ```
 
 ライセンスサーバのアドレスや Vivado のインストール先といった**マシン固有の値**は
-`vcs.local.conf` (`.gitignore` 済み) か環境変数に置く。
+`vvd.local.conf` (`.gitignore` 済み) か環境変数に置く。
 
 ```conf
-# vcs.local.conf
-VCS_LICENSE=2100@license.example.com
-VCS_XILINX_ROOT=/opt/Xilinx
+# vvd.local.conf
+VVD_LICENSE=2100@license.example.com
+VVD_XILINX_ROOT=/opt/Xilinx
 ```
 
 全キーは [02 設定](02-configuration.md)。
@@ -79,12 +82,12 @@ VCS_XILINX_ROOT=/opt/Xilinx
 ## 5. 動かす
 
 ```sh
-vcs sim          # シミュレーション。ライセンス不要なので最初の確認に向く
-vcs synth        # 合成
-vcs impl         # 配置配線 (必要なら合成も走る)
-vcs bitstream    # ビットストリーム生成
-vcs flow         # 上記 3 つを 1 回の Vivado 起動でまとめて
-vcs program      # JTAG 書き込み
+vvd sim          # シミュレーション。ライセンス不要なので最初の確認に向く
+vvd synth        # 合成
+vvd impl         # 配置配線 (必要なら合成も走る)
+vvd bitstream    # ビットストリーム生成
+vvd flow         # 上記 3 つを 1 回の Vivado 起動でまとめて
+vvd program      # JTAG 書き込み
 ```
 
 生成物は `build/` の下に出る。
@@ -102,10 +105,10 @@ build/
 ## 6. 対話的に使う
 
 ```sh
-vcs tcl                    # Vivado Tcl コンソール
-vcs gui                    # Vivado IDE
-vcs gui build/post_route.dcp   # チェックポイントを開く
-vcs shell                  # Vivado が PATH に載った bash
+vvd tcl                    # Vivado Tcl コンソール
+vvd gui                    # Vivado IDE
+vvd gui build/post_route.dcp   # チェックポイントを開く
+vvd shell                  # Vivado が PATH に載った bash
 ```
 
 ## サンプル
@@ -113,8 +116,8 @@ vcs shell                  # Vivado が PATH に載った bash
 同梱の `examples/blinky` がそのまま動く。
 
 ```sh
-vcs -C examples/blinky sim
-vcs -C examples/blinky flow
+vvd -C examples/blinky sim
+vvd -C examples/blinky flow
 ```
 
 ## 次に読む

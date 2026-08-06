@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Behavioural simulation with xvlog / xvhdl / xelab / xsim.
 #
-# Runs inside the container, driven entirely by VCS_* environment variables.
+# Runs inside the container, driven entirely by VVD_* environment variables.
 # The standalone compilers are used rather than a Vivado project: they start in
 # under a second and produce the same xsim kernel the IDE does.
 set -euo pipefail
@@ -9,17 +9,17 @@ set -euo pipefail
 gui=0
 [ "${1:-}" = "--gui" ] && gui=1
 
-log()  { printf 'vcs-sim  ▸ %s\n' "$*" >&2; }
-fail() { printf 'vcs-sim  ✗ %s\n' "$*" >&2; exit 1; }
+log()  { printf 'vvd-sim  ▸ %s\n' "$*" >&2; }
+fail() { printf 'vvd-sim  ✗ %s\n' "$*" >&2; exit 1; }
 
 command -v xelab >/dev/null 2>&1 ||
-  fail "xelab is not on PATH -- is Vivado available in the container?  Try: vcs doctor"
+  fail "xelab is not on PATH -- is Vivado available in the container?  Try: vvd doctor"
 
-top="${VCS_SIM_TOP:?VCS_SIM_TOP is not set}"
-build="${VCS_BUILD_DIR:-build}"
+top="${VVD_SIM_TOP:?VVD_SIM_TOP is not set}"
+build="${VVD_BUILD_DIR:-build}"
 # The project is always mounted at /work; the indirection exists so the script
 # can be exercised by the test suite outside a container.
-work="${VCS_CONTAINER_WORK:-/work}"
+work="${VVD_CONTAINER_WORK:-/work}"
 simdir="$work/$build/sim"
 logdir="$work/$build/logs"
 mkdir -p "$simdir" "$logdir"
@@ -49,12 +49,12 @@ collect() { # <array-name> <patterns...>
 }
 
 # shellcheck disable=SC2206,SC2086
-collect vlog ${VCS_SIM_SOURCES:-} ${VCS_SOURCES:-} ${VCS_SV_SOURCES:-}
+collect vlog ${VVD_SIM_SOURCES:-} ${VVD_SOURCES:-} ${VVD_SV_SOURCES:-}
 # shellcheck disable=SC2206,SC2086
-collect vhdl ${VCS_SIM_VHDL_SOURCES:-} ${VCS_VHDL_SOURCES:-}
+collect vhdl ${VVD_SIM_VHDL_SOURCES:-} ${VVD_VHDL_SOURCES:-}
 
 [ ${#vlog[@]} -gt 0 ] || [ ${#vhdl[@]} -gt 0 ] ||
-  fail "no simulation sources; set VCS_SIM_SOURCES (and/or VCS_SIM_VHDL_SOURCES) in vcs.conf"
+  fail "no simulation sources; set VVD_SIM_SOURCES (and/or VVD_SIM_VHDL_SOURCES) in vvd.conf"
 
 # xvlog and friends create xsim.dir next to the invocation; keep it in build/.
 cd "$simdir"
@@ -62,7 +62,7 @@ cd "$simdir"
 if [ ${#vlog[@]} -gt 0 ]; then
   log "xvlog: ${#vlog[@]} file(s)"
   # shellcheck disable=SC2086
-  xvlog --sv --relax --nolog ${VCS_SIM_XVLOG_ARGS:-} "${vlog[@]}"
+  xvlog --sv --relax --nolog ${VVD_SIM_XVLOG_ARGS:-} "${vlog[@]}"
 fi
 if [ ${#vhdl[@]} -gt 0 ]; then
   log "xvhdl: ${#vhdl[@]} file(s)"
@@ -70,20 +70,20 @@ if [ ${#vhdl[@]} -gt 0 ]; then
 fi
 
 snapshot="${top}_snap"
-elab=(--relax --debug typical --nolog --snapshot "$snapshot" --mt "${VCS_JOBS:-4}")
-for lib in ${VCS_SIM_LIBS:-}; do elab+=(-L "$lib"); done
+elab=(--relax --debug typical --nolog --snapshot "$snapshot" --mt "${VVD_JOBS:-4}")
+for lib in ${VVD_SIM_LIBS:-}; do elab+=(-L "$lib"); done
 # What post-synthesis and IP-bearing testbenches need.
 elab+=(-L unisims_ver -L unimacro_ver -L secureip)
 
 log "xelab: $top"
 # shellcheck disable=SC2086
-xelab "${elab[@]}" ${VCS_SIM_XELAB_ARGS:-} "$top"
+xelab "${elab[@]}" ${VVD_SIM_XELAB_ARGS:-} "$top"
 
 # --- run script ------------------------------------------------------------
 runtcl="$simdir/run.tcl"
 {
-  [ "${VCS_SIM_WAVES:-1}" = "1" ] && printf 'log_wave -recursive *\n'
-  if [ -n "${VCS_SIM_TIME:-}" ]; then printf 'run %s\n' "$VCS_SIM_TIME"
+  [ "${VVD_SIM_WAVES:-1}" = "1" ] && printf 'log_wave -recursive *\n'
+  if [ -n "${VVD_SIM_TIME:-}" ]; then printf 'run %s\n' "$VVD_SIM_TIME"
   else printf 'run all\n'; fi
   [ "$gui" -eq 0 ] && printf 'quit\n'
 } >"$runtcl"

@@ -1,7 +1,7 @@
 // Self-checking testbench for blinky.
 //
 // Runs against a deliberately tiny divider so the whole thing completes in a
-// few microseconds; `vcs sim` fails the run if any check reports FAILED.
+// few microseconds; `vvd sim` fails the run if any check reports FAILED.
 `timescale 1ns / 1ps
 
 module tb_blinky;

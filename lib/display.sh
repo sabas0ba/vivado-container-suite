@@ -1,12 +1,12 @@
 # shellcheck shell=bash
 # GUI plumbing: X11 over a Unix socket or TCP, XWayland, headless Xvfb, and VNC.
 
-VCS_XAUTH_FILE=""
-VCS_VNC_FILE=""
+VVD_XAUTH_FILE=""
+VVD_VNC_FILE=""
 
 display_effective_mode() {
-  case "$VCS_DISPLAY_MODE" in
-    x11|xvfb|none) printf '%s' "$VCS_DISPLAY_MODE"; return 0 ;;
+  case "$VVD_DISPLAY_MODE" in
+    x11|xvfb|none) printf '%s' "$VVD_DISPLAY_MODE"; return 0 ;;
     wayland)
       # Vivado ships an X11-only Qt build, so a Wayland session is served
       # through the compositor's XWayland socket rather than natively.
@@ -14,7 +14,7 @@ display_effective_mode() {
         die "display mode 'wayland' needs XWayland (DISPLAY is unset); start XWayland or use --display xvfb"
       printf 'x11'; return 0 ;;
     auto) ;;
-    *) die "VCS_DISPLAY_MODE must be auto, x11, wayland, xvfb or none (got: $VCS_DISPLAY_MODE)" ;;
+    *) die "VVD_DISPLAY_MODE must be auto, x11, wayland, xvfb or none (got: $VVD_DISPLAY_MODE)" ;;
   esac
 
   if [ -n "${DISPLAY:-}" ]; then
@@ -58,17 +58,17 @@ display_prepare() {
     # `ssh -X` leaves sshd listening on the host's 127.0.0.1 (X11UseLocalhost
     # defaults to yes), so no gateway address reaches it -- the container has to
     # share the host's network namespace.
-    if [ -z "$VCS_NETWORK" ]; then
+    if [ -z "$VVD_NETWORK" ]; then
       log_debug "DISPLAY=$DISPLAY is an ssh-forwarded TCP display; using host networking"
-      VCS_NETWORK=host
-    elif [ "$VCS_NETWORK" != "host" ]; then
-      log_warn "DISPLAY=$DISPLAY needs host networking, but VCS_NETWORK=$VCS_NETWORK is set"
-      log_warn "the GUI will not reach the X server; unset VCS_NETWORK or use --display xvfb --vnc"
+      VVD_NETWORK=host
+    elif [ "$VVD_NETWORK" != "host" ]; then
+      log_warn "DISPLAY=$DISPLAY needs host networking, but VVD_NETWORK=$VVD_NETWORK is set"
+      log_warn "the GUI will not reach the X server; unset VVD_NETWORK or use --display xvfb --vnc"
     fi
-    export VCS_NETWORK
+    export VVD_NETWORK
   fi
 
-  if [ "${VCS_VNC:-0}" -eq 1 ]; then
+  if [ "${VVD_VNC:-0}" -eq 1 ]; then
     display_prepare_vnc
   fi
 
@@ -79,16 +79,16 @@ display_prepare() {
   }
   [ -n "${DISPLAY:-}" ] || return 0
 
-  VCS_XAUTH_FILE="$(mktemp -t vcs-xauth.XXXXXX)"
-  VCS_TEMP_FILES+=("$VCS_XAUTH_FILE")
+  VVD_XAUTH_FILE="$(mktemp -t vvd-xauth.XXXXXX)"
+  VVD_TEMP_FILES+=("$VVD_XAUTH_FILE")
   # An untrusted, per-run cookie: narrower than `xhost +local:`, and it is
   # discarded when the command exits.
   if xauth nlist "$DISPLAY" 2>/dev/null | sed -e 's/^..../ffff/' |
-       xauth -f "$VCS_XAUTH_FILE" nmerge - 2>/dev/null && [ -s "$VCS_XAUTH_FILE" ]; then
-    chmod 0644 "$VCS_XAUTH_FILE"
+       xauth -f "$VVD_XAUTH_FILE" nmerge - 2>/dev/null && [ -s "$VVD_XAUTH_FILE" ]; then
+    chmod 0644 "$VVD_XAUTH_FILE"
   else
-    rm -f "$VCS_XAUTH_FILE"
-    VCS_XAUTH_FILE=""
+    rm -f "$VVD_XAUTH_FILE"
+    VVD_XAUTH_FILE=""
     log_warn "could not export an X cookie; if the GUI fails to connect, run: xhost +SI:localuser:$(id -un)"
   fi
 }
@@ -98,7 +98,7 @@ display_prepare() {
 # The password is never passed as an environment variable or an argument: both
 # are visible to anyone who can run `docker inspect` or `ps` on the host.
 display_prepare_vnc() {
-  local password="${VCS_VNC_PASSWORD:-}" generated=0
+  local password="${VVD_VNC_PASSWORD:-}" generated=0
   if [ -z "$password" ]; then
     # Read a fixed amount and filter, rather than piping an endless /dev/urandom
     # into `head`: under `set -o pipefail` the SIGPIPE that kills the producer
@@ -108,23 +108,23 @@ display_prepare_vnc() {
     generated=1
   fi
 
-  VCS_VNC_FILE="$(mktemp -t vcs-vnc.XXXXXX)"
-  VCS_TEMP_FILES+=("$VCS_VNC_FILE")
-  chmod 0600 "$VCS_VNC_FILE"
-  printf '%s\n' "$password" >"$VCS_VNC_FILE"
+  VVD_VNC_FILE="$(mktemp -t vvd-vnc.XXXXXX)"
+  VVD_TEMP_FILES+=("$VVD_VNC_FILE")
+  chmod 0600 "$VVD_VNC_FILE"
+  printf '%s\n' "$password" >"$VVD_VNC_FILE"
 
-  if [ "$VCS_VNC_BIND" = "0.0.0.0" ]; then
-    log_warn "publishing VNC on all interfaces; anyone who can reach port $VCS_VNC_PORT can drive the GUI"
+  if [ "$VVD_VNC_BIND" = "0.0.0.0" ]; then
+    log_warn "publishing VNC on all interfaces; anyone who can reach port $VVD_VNC_PORT can drive the GUI"
   fi
 
-  log_info "VNC on ${VCS_VNC_BIND}:${VCS_VNC_PORT}"
+  log_info "VNC on ${VVD_VNC_BIND}:${VVD_VNC_PORT}"
   if [ "$generated" -eq 1 ]; then
-    log_info "password: $password  (one-off; set VCS_VNC_PASSWORD to choose your own)"
+    log_info "password: $password  (one-off; set VVD_VNC_PASSWORD to choose your own)"
   else
-    log_info "password: from VCS_VNC_PASSWORD"
+    log_info "password: from VVD_VNC_PASSWORD"
   fi
-  if [ "$VCS_VNC_BIND" = "127.0.0.1" ]; then
-    log_info "from another machine:  ssh -L ${VCS_VNC_PORT}:127.0.0.1:${VCS_VNC_PORT} $(id -un)@$(hostname)"
+  if [ "$VVD_VNC_BIND" = "127.0.0.1" ]; then
+    log_info "from another machine:  ssh -L ${VVD_VNC_PORT}:127.0.0.1:${VVD_VNC_PORT} $(id -un)@$(hostname)"
   fi
 }
 
@@ -133,15 +133,15 @@ display_args() {
   local mode="$1"
   case "$mode" in
     none)
-      printf -- '--env\nVCS_DISPLAY_MODE=none\n'
+      printf -- '--env\nVVD_DISPLAY_MODE=none\n'
       ;;
     xvfb)
-      printf -- '--env\nVCS_DISPLAY_MODE=xvfb\n'
+      printf -- '--env\nVVD_DISPLAY_MODE=xvfb\n'
       vnc_args
       ;;
     x11)
       [ -n "${DISPLAY:-}" ] || die "DISPLAY is unset; cannot forward X11"
-      printf -- '--env\nVCS_DISPLAY_MODE=x11\n'
+      printf -- '--env\nVVD_DISPLAY_MODE=x11\n'
       printf -- '--env\nDISPLAY=%s\n' "$DISPLAY"
 
       case "$(display_transport)" in
@@ -154,14 +154,14 @@ display_args() {
           : ;;
       esac
 
-      if [ -n "$VCS_XAUTH_FILE" ]; then
-        mount_ro "$VCS_XAUTH_FILE" "$VCS_CONTAINER_HOME/.Xauthority"
-        printf -- '--env\nXAUTHORITY=%s/.Xauthority\n' "$VCS_CONTAINER_HOME"
+      if [ -n "$VVD_XAUTH_FILE" ]; then
+        mount_ro "$VVD_XAUTH_FILE" "$VVD_CONTAINER_HOME/.Xauthority"
+        printf -- '--env\nXAUTHORITY=%s/.Xauthority\n' "$VVD_CONTAINER_HOME"
       fi
 
       # Software rendering is the portable default; --gpu opts into direct
       # rendering when the host has a usable DRI device.
-      if [ "${VCS_GPU:-0}" -eq 1 ]; then
+      if [ "${VVD_GPU:-0}" -eq 1 ]; then
         [ -d /dev/dri ] || die "--gpu requested but /dev/dri does not exist"
         printf -- '--device\n/dev/dri\n'
       else
@@ -173,16 +173,16 @@ display_args() {
 }
 
 vnc_args() {
-  [ "${VCS_VNC:-0}" -eq 1 ] || return 0
-  [ -n "$VCS_VNC_FILE" ] || die "internal: display_prepare_vnc did not run"
-  printf -- '--env\nVCS_VNC=1\n'
-  mount_ro "$VCS_VNC_FILE" /opt/vcs/vnc-password
-  if [ "$VCS_NETWORK" = "host" ]; then
+  [ "${VVD_VNC:-0}" -eq 1 ] || return 0
+  [ -n "$VVD_VNC_FILE" ] || die "internal: display_prepare_vnc did not run"
+  printf -- '--env\nVVD_VNC=1\n'
+  mount_ro "$VVD_VNC_FILE" /opt/vvd/vnc-password
+  if [ "$VVD_NETWORK" = "host" ]; then
     # Published ports are discarded under host networking; the port is already
     # on the host, so say so rather than letting the engine warn cryptically.
-    log_warn "host networking is in effect; VNC listens on the host's port 5900 directly, not ${VCS_VNC_PORT}"
+    log_warn "host networking is in effect; VNC listens on the host's port 5900 directly, not ${VVD_VNC_PORT}"
   else
-    printf -- '--publish\n%s:%s:5900\n' "$VCS_VNC_BIND" "$VCS_VNC_PORT"
+    printf -- '--publish\n%s:%s:5900\n' "$VVD_VNC_BIND" "$VVD_VNC_PORT"
   fi
 }
 
@@ -196,8 +196,8 @@ display_describe() {
         tcp-remote) printf 'X11 forwarding via %s (remote X server)' "$DISPLAY" ;;
       esac ;;
     xvfb)
-      if [ "${VCS_VNC:-0}" -eq 1 ]; then
-        printf 'headless Xvfb, exported over VNC on %s:%s' "$VCS_VNC_BIND" "$VCS_VNC_PORT"
+      if [ "${VVD_VNC:-0}" -eq 1 ]; then
+        printf 'headless Xvfb, exported over VNC on %s:%s' "$VVD_VNC_BIND" "$VVD_VNC_PORT"
       else
         printf 'headless (Xvfb inside the container)'
       fi ;;

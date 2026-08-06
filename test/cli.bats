@@ -6,7 +6,7 @@ setup()    { load_helpers; setup_project; }
 teardown() { teardown_project; }
 
 @test "help lists every documented command" {
-  run "$VCS_REPO_ROOT/bin/vcs" --help
+  run "$VVD_REPO_ROOT/bin/vvd" --help
   [ "$status" -eq 0 ]
   for c in build pull synth impl bitstream flow sim program clean tcl run gui shell hw-server doctor selftest info jtag-rules; do
     [[ "$output" == *"$c"* ]] || { echo "missing from help: $c"; false; }
@@ -14,45 +14,45 @@ teardown() { teardown_project; }
 }
 
 @test "no arguments prints usage and exits 2" {
-  run "$VCS_REPO_ROOT/bin/vcs"
+  run "$VVD_REPO_ROOT/bin/vvd"
   [ "$status" -eq 2 ]
 }
 
 @test "version is reported without touching the engine" {
-  run "$VCS_REPO_ROOT/bin/vcs" version
+  run "$VVD_REPO_ROOT/bin/vvd" version
   [ "$status" -eq 0 ]
-  [[ "$output" == vcs\ * ]]
+  [[ "$output" == vvd\ * ]]
 }
 
 @test "an unknown command fails with exit 2" {
-  run vcs frobnicate
+  run vvd frobnicate
   [ "$status" -eq 2 ]
   [[ "$output" == *"unknown command: frobnicate"* ]]
 }
 
 @test "an unknown global option fails with exit 2" {
-  run vcs --nope synth
+  run vvd --nope synth
   [ "$status" -eq 2 ]
 }
 
 @test "every command in help has an implementation" {
-  run "$VCS_REPO_ROOT/bin/vcs" --help
+  run "$VVD_REPO_ROOT/bin/vvd" --help
   for c in build pull image synth impl bitstream flow sim program clean tcl run gui shell hw-server doctor selftest info jtag-rules; do
-    [ -f "$VCS_REPO_ROOT/lib/cmd/$c.sh" ] || { echo "no lib/cmd/$c.sh"; false; }
-    grep -q "^cmd_${c//-/_}()" "$VCS_REPO_ROOT/lib/cmd/$c.sh" || { echo "no cmd function in $c.sh"; false; }
+    [ -f "$VVD_REPO_ROOT/lib/cmd/$c.sh" ] || { echo "no lib/cmd/$c.sh"; false; }
+    grep -q "^cmd_${c//-/_}()" "$VVD_REPO_ROOT/lib/cmd/$c.sh" || { echo "no cmd function in $c.sh"; false; }
   done
 }
 
 @test "each subcommand accepts --help without an engine" {
-  export VCS_ENGINE=docker
+  export VVD_ENGINE=docker
   for c in build pull image synth impl bitstream flow sim program clean tcl run gui shell hw-server doctor selftest info jtag-rules; do
-    run vcs "$c" --help
-    [ "$status" -eq 0 ] || { echo "vcs $c --help exited $status: $output"; false; }
+    run vvd "$c" --help
+    [ "$status" -eq 0 ] || { echo "vvd $c --help exited $status: $output"; false; }
   done
 }
 
 @test "info reports the resolved configuration" {
-  run vcs info
+  run vvd info
   [ "$status" -eq 0 ]
   [[ "$output" == *"xc7a35tcpg236-1"* ]]
   [[ "$output" == *"2025.2"* ]]
@@ -60,20 +60,20 @@ teardown() { teardown_project; }
 }
 
 @test "image prints the derived reference" {
-  run vcs image
+  run vvd image
   [ "$status" -eq 0 ]
   [ "$output" = "vivado-container-suite:2025.2-base" ]
 }
 
 @test "clean refuses an absolute build directory" {
-  run vcs --build-dir /etc clean -f
+  run vvd --build-dir /etc clean -f
   [ "$status" -ne 0 ]
   [[ "$output" == *"refusing to clean"* ]]
 }
 
 @test "clean removes the build directory" {
   mkdir -p "$PROJECT/build/logs"
-  run vcs clean -f
+  run vvd clean -f
   [ "$status" -eq 0 ]
   [ ! -d "$PROJECT/build" ]
 }

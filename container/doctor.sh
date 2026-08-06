@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# In-container half of `vcs doctor --deep`.
+# In-container half of `vvd doctor --deep`.
 set -uo pipefail
 
 fails=0
@@ -27,11 +27,11 @@ ok "uid=$(id -u) gid=$(id -g) ($(id -un 2>/dev/null || echo '<no passwd entry>')
 if [ -w /work ]; then ok "/work is writable"; else bad "/work is not writable"; fi
 if [ -w "$HOME" ]; then ok "\$HOME ($HOME) is writable"; else bad "\$HOME ($HOME) is not writable"; fi
 
-if [ "${VCS_VIVADO_READY:-0}" = "1" ]; then
+if [ "${VVD_VIVADO_READY:-0}" = "1" ]; then
   ok "Vivado environment sourced"
 else
   bad "settings64.sh was not found; Vivado is not on PATH"
-  note "mount mode: check VCS_XILINX_ROOT / VCS_VIVADO_VERSION on the host"
+  note "mount mode: check VVD_XILINX_ROOT / VVD_VIVADO_VERSION on the host"
 fi
 
 for t in vivado xelab xsim xvlog hw_server xsct; do
@@ -49,7 +49,7 @@ done
 if [ ${#missing[@]} -eq 0 ]; then ok "runtime libraries present"
 else bad "missing runtime libraries: ${missing[*]}"; fi
 
-case "${VCS_DISPLAY_MODE:-none}" in
+case "${VVD_DISPLAY_MODE:-none}" in
   x11|xvfb)
     if [ -n "${DISPLAY:-}" ] && command -v xdpyinfo >/dev/null 2>&1 &&
        xdpyinfo >/dev/null 2>&1; then
@@ -71,8 +71,8 @@ else
   printf '  warn  no XILINXD_LICENSE_FILE; licensed features will fail\n'
 fi
 
-if [ -n "${VCS_HW_SERVER_URL:-}" ]; then
-  hp="${VCS_HW_SERVER_URL#TCP:}"
+if [ -n "${VVD_HW_SERVER_URL:-}" ]; then
+  hp="${VVD_HW_SERVER_URL#TCP:}"
   h="${hp%%:*}"; p="${hp##*:}"
   if (exec 3<>"/dev/tcp/$h/$p") 2>/dev/null; then ok "hw_server reachable at $h:$p"
   else printf '  warn  hw_server not reachable at %s:%s\n' "$h" "$p"; fi

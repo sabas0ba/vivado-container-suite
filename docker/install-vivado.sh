@@ -3,16 +3,16 @@
 #
 # The tarball is verified against docker/vivado-versions.lock a second time here
 # (the CLI already checked it on the host) so that a build driven by something
-# other than `vcs build` still cannot install an unverified installer.
+# other than `vvd build` still cannot install an unverified installer.
 set -euo pipefail
 
 installer="${1:-}"
 case "$installer" in
-  ''|*/) echo "install-vivado: no installer given; build with: vcs build --installer <tarball>" >&2; exit 1 ;;
+  ''|*/) echo "install-vivado: no installer given; build with: vvd build --installer <tarball>" >&2; exit 1 ;;
 esac
 version="${VIVADO_VERSION:?}"
 edition_name="${VIVADO_EDITION_NAME:-Vivado ML Standard}"
-lock=/opt/vcs/pin/vivado-versions.lock
+lock=/opt/vvd/pin/vivado-versions.lock
 
 log() { printf 'install-vivado: %s\n' "$*" >&2; }
 

@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# vcs program -- push a bitstream onto the device over JTAG.
+# vvd program -- push a bitstream onto the device over JTAG.
 
 cmd_program() {
   local bit="" target="" probes="" list_only=0
@@ -11,55 +11,55 @@ cmd_program() {
       --list)    list_only=1; shift ;;
       -h|--help)
         cat <<'H'
-vcs program [options]
+vvd program [options]
 
   --bit FILE      Bitstream to download (default: <build>/<top>.bit)
   --target PAT    Device to program when the scan chain has more than one
   --probes FILE   Debug probes (.ltx) to associate with the device
   --list          Only enumerate the scan chain, program nothing
 
-Transport is chosen by --jtag / VCS_JTAG_MODE:
+Transport is chosen by --jtag / VVD_JTAG_MODE:
   host            hw_server runs on the host (default; no device passthrough)
   usb             USB cable handed to the container, hw_server runs inside it
   remote:H[:P]    a named hw_server, e.g. a lab machine
 See docs/07-jtag.md.
 H
         return 0 ;;
-      *) die_usage "vcs program: unexpected argument: $1" ;;
+      *) die_usage "vvd program: unexpected argument: $1" ;;
     esac
   done
 
   local kind
   kind="$(jtag_parse_mode | cut -f1)"
-  [ "$kind" = "none" ] && die "VCS_JTAG_MODE is 'none'; pick --jtag host, --jtag usb or --jtag remote:HOST"
+  [ "$kind" = "none" ] && die "VVD_JTAG_MODE is 'none'; pick --jtag host, --jtag usb or --jtag remote:HOST"
 
   if [ -z "$bit" ]; then
-    require_project_settings VCS_TOP
-    bit="$VCS_BUILD_DIR/$VCS_TOP.bit"
+    require_project_settings VVD_TOP
+    bit="$VVD_BUILD_DIR/$VVD_TOP.bit"
   fi
 
   # Reject a path that would not be visible inside the container.
-  local host_bit="$VCS_PROJECT_ROOT/$bit"
+  local host_bit="$VVD_PROJECT_ROOT/$bit"
   case "$bit" in /*) host_bit="$bit" ;; esac
-  if [ "$list_only" -eq 0 ] && [ "${VCS_DRY_RUN:-0}" -eq 0 ]; then
+  if [ "$list_only" -eq 0 ] && [ "${VVD_DRY_RUN:-0}" -eq 0 ]; then
     [ -f "$host_bit" ] || die "bitstream not found: $host_bit
-  Build one first:  vcs bitstream"
+  Build one first:  vvd bitstream"
   fi
 
   local cbit="$bit"
   case "$bit" in
-    /*) cbit="${bit/#$VCS_PROJECT_ROOT/$VCS_CONTAINER_WORK}"
+    /*) cbit="${bit/#$VVD_PROJECT_ROOT/$VVD_CONTAINER_WORK}"
         [ "$cbit" = "$bit" ] && die "bitstream is outside the project root and therefore not visible in the container: $bit" ;;
-    *)  cbit="$VCS_CONTAINER_WORK/$bit" ;;
+    *)  cbit="$VVD_CONTAINER_WORK/$bit" ;;
   esac
 
-  VCS_PROGRAM_BIT="$cbit"
-  VCS_PROGRAM_TARGET="$target"
-  VCS_PROGRAM_PROBES="$probes"
-  VCS_PROGRAM_LIST="$list_only"
-  export VCS_PROGRAM_BIT VCS_PROGRAM_TARGET VCS_PROGRAM_PROBES VCS_PROGRAM_LIST
+  VVD_PROGRAM_BIT="$cbit"
+  VVD_PROGRAM_TARGET="$target"
+  VVD_PROGRAM_PROBES="$probes"
+  VVD_PROGRAM_LIST="$list_only"
+  export VVD_PROGRAM_BIT VVD_PROGRAM_TARGET VVD_PROGRAM_PROBES VVD_PROGRAM_LIST
 
-  VCS_EXTRA_ENV="$VCS_EXTRA_ENV VCS_PROGRAM_BIT VCS_PROGRAM_TARGET VCS_PROGRAM_PROBES VCS_PROGRAM_LIST"
+  VVD_EXTRA_ENV="$VVD_EXTRA_ENV VVD_PROGRAM_BIT VVD_PROGRAM_TARGET VVD_PROGRAM_PROBES VVD_PROGRAM_LIST"
 
   log_info "jtag: $(jtag_describe)"
   if [ "$list_only" -eq 1 ]; then
@@ -67,5 +67,5 @@ H
   else
     log_info "programming $cbit"
   fi
-  vivado_batch "$VCS_CONTAINER_TCL/program.tcl" program
+  vivado_batch "$VVD_CONTAINER_TCL/program.tcl" program
 }

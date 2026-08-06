@@ -9,7 +9,7 @@ tclsh_available() { command -v tclsh >/dev/null 2>&1; }
 
 @test "every Tcl file parses" {
   tclsh_available || skip "tclsh is not installed"
-  for f in "$VCS_REPO_ROOT"/tcl/*.tcl; do
+  for f in "$VVD_REPO_ROOT"/tcl/*.tcl; do
     # `info complete` on the whole file catches unbalanced braces, brackets and
     # quotes without needing Vivado's command set.
     run tclsh -c "
@@ -21,25 +21,25 @@ tclsh_available() { command -v tclsh >/dev/null 2>&1; }
 }
 
 @test "lib.tcl defines the helpers the flows use" {
-  for proc in vcs::env vcs::info_ vcs::fatal vcs::build_dir vcs::expand \
-              vcs::read_sources vcs::part vcs::top vcs::write_reports \
-              vcs::check_timing; do
-    grep -q "proc ${proc} " "$VCS_REPO_ROOT/tcl/lib.tcl" ||
+  for proc in vvd::env vvd::info_ vvd::fatal vvd::build_dir vvd::expand \
+              vvd::read_sources vvd::part vvd::top vvd::write_reports \
+              vvd::check_timing; do
+    grep -q "proc ${proc} " "$VVD_REPO_ROOT/tcl/lib.tcl" ||
       { echo "missing proc: $proc"; false; }
   done
 }
 
 @test "flow.tcl handles every stage the CLI can ask for" {
   for stage in synth impl bitstream all; do
-    grep -qE "^\s+$stage\b" "$VCS_REPO_ROOT/tcl/flow.tcl" ||
+    grep -qE "^\s+$stage\b" "$VVD_REPO_ROOT/tcl/flow.tcl" ||
       { echo "flow.tcl does not handle stage: $stage"; false; }
   done
 }
 
 @test "the Tcl layer reads only environment variables the CLI exports" {
-  exported="$(grep -rhoE 'VCS_[A-Z0-9_]+' "$VCS_REPO_ROOT/lib" | sort -u)"
+  exported="$(grep -rhoE 'VVD_[A-Z0-9_]+' "$VVD_REPO_ROOT/lib" | sort -u)"
   missing=""
-  for k in $(grep -rhoE 'vcs::env (VCS_[A-Z0-9_]+)' "$VCS_REPO_ROOT/tcl" \
+  for k in $(grep -rhoE 'vvd::env (VVD_[A-Z0-9_]+)' "$VVD_REPO_ROOT/tcl" \
              | awk '{print $2}' | sort -u); do
     printf '%s\n' "$exported" | grep -qx "$k" || missing="$missing $k"
   done
@@ -47,16 +47,16 @@ tclsh_available() { command -v tclsh >/dev/null 2>&1; }
 }
 
 @test "timing failure is fatal unless explicitly allowed" {
-  grep -q 'VCS_ALLOW_TIMING_VIOLATION' "$VCS_REPO_ROOT/tcl/lib.tcl"
-  grep -q 'vcs::fatal "timing not met' "$VCS_REPO_ROOT/tcl/lib.tcl"
+  grep -q 'VVD_ALLOW_TIMING_VIOLATION' "$VVD_REPO_ROOT/tcl/lib.tcl"
+  grep -q 'vvd::fatal "timing not met' "$VVD_REPO_ROOT/tcl/lib.tcl"
 }
 
 @test "a source pattern matching nothing is an error, not an empty design" {
-  grep -q 'matched no files' "$VCS_REPO_ROOT/tcl/lib.tcl"
-  grep -q 'matched no files' "$VCS_REPO_ROOT/container/sim.sh"
+  grep -q 'matched no files' "$VVD_REPO_ROOT/tcl/lib.tcl"
+  grep -q 'matched no files' "$VVD_REPO_ROOT/container/sim.sh"
 }
 
 @test "program.tcl fails loudly when hw_server is unreachable" {
-  grep -q 'cannot reach hw_server' "$VCS_REPO_ROOT/tcl/program.tcl"
-  grep -q 'no JTAG target is attached' "$VCS_REPO_ROOT/tcl/program.tcl"
+  grep -q 'cannot reach hw_server' "$VVD_REPO_ROOT/tcl/program.tcl"
+  grep -q 'no JTAG target is attached' "$VVD_REPO_ROOT/tcl/program.tcl"
 }

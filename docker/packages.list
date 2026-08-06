@@ -63,7 +63,7 @@ xauth
 x11-utils
 xvfb
 # x11vnc exports the headless Xvfb display, so a GUI is usable on a machine
-# with no X server of its own (`vcs gui --vnc`).
+# with no X server of its own (`vvd gui --vnc`).
 x11vnc
 
 ## --- XCB / xkb (Vivado bundles Qt, which dlopen()s these) -------------------

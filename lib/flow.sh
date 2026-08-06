@@ -10,7 +10,7 @@ vivado_batch() {
     -mode batch \
     -nojournal \
     -notrace \
-    -log "$VCS_CONTAINER_WORK/$VCS_BUILD_DIR/logs/${logname}.log" \
+    -log "$VVD_CONTAINER_WORK/$VVD_BUILD_DIR/logs/${logname}.log" \
     -source "$script" \
     ${tclargs[@]+"${tclargs[@]}"}
 }
@@ -24,21 +24,21 @@ require_project_settings() {
   done
   [ ${#missing[@]} -eq 0 ] && return 0
   die "missing required configuration: ${missing[*]}
-  Set them in $VCS_PROJECT_ROOT/vcs.conf (see docs/02-configuration.md),
+  Set them in $VVD_PROJECT_ROOT/vvd.conf (see docs/02-configuration.md),
   or pass them on the command line where a flag exists."
 }
 
 flow_stage() { # <stage>
   local stage="$1"
-  case "$VCS_FLOW_MODE" in
+  case "$VVD_FLOW_MODE" in
     nonproject)
-      require_project_settings VCS_TOP VCS_PART
+      require_project_settings VVD_TOP VVD_PART
       ;;
     project)
-      [ -n "$VCS_XPR" ] || die "VCS_FLOW_MODE=project requires VCS_XPR to point at a .xpr"
+      [ -n "$VVD_XPR" ] || die "VVD_FLOW_MODE=project requires VVD_XPR to point at a .xpr"
       ;;
-    *) die "VCS_FLOW_MODE must be 'nonproject' or 'project' (got: $VCS_FLOW_MODE)" ;;
+    *) die "VVD_FLOW_MODE must be 'nonproject' or 'project' (got: $VVD_FLOW_MODE)" ;;
   esac
-  log_info "$stage: $VCS_PROJECT_NAME (${VCS_FLOW_MODE} flow, Vivado $VCS_VIVADO_VERSION)"
-  vivado_batch "$VCS_CONTAINER_TCL/flow.tcl" "$stage" "$stage"
+  log_info "$stage: $VVD_PROJECT_NAME (${VVD_FLOW_MODE} flow, Vivado $VVD_VIVADO_VERSION)"
+  vivado_batch "$VVD_CONTAINER_TCL/flow.tcl" "$stage" "$stage"
 }

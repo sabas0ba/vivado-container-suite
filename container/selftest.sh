@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# In-container selftest stages.  Driven by `vcs selftest`.
+# In-container selftest stages.  Driven by `vvd selftest`.
 #
 # Exit codes:  0 pass, 77 skipped (a precondition is absent), anything else fail.
 set -uo pipefail
@@ -10,16 +10,16 @@ log()  { printf 'selftest ▸ %s\n' "$*" >&2; }
 fail() { printf 'selftest ✗ %s\n' "$*" >&2; exit 1; }
 skip() { printf 'selftest - %s\n' "$*" >&2; exit 77; }
 
-build="${VCS_BUILD_DIR:-build}"
+build="${VVD_BUILD_DIR:-build}"
 work="/work/$build/selftest"
-smoke=/opt/vcs/lib/smoke
+smoke=/opt/vvd/lib/smoke
 
 need_vivado() {
-  [ "${VCS_VIVADO_READY:-0}" = "1" ] && return 0
+  [ "${VVD_VIVADO_READY:-0}" = "1" ] && return 0
   # CI builds the base image without Vivado in it, and there is real value in
   # still exercising everything that does not need the tools.  Set
-  # VCS_SELFTEST_REQUIRE_VIVADO=0 to turn those stages into skips.
-  { [ "${VCS_SELFTEST_REQUIRE_VIVADO:-1}" = "0" ] || [ "${VCS_VIVADO_MODE:-mount}" = "none" ]; } &&
+  # VVD_SELFTEST_REQUIRE_VIVADO=0 to turn those stages into skips.
+  { [ "${VVD_SELFTEST_REQUIRE_VIVADO:-1}" = "0" ] || [ "${VVD_VIVADO_MODE:-mount}" = "none" ]; } &&
     skip "Vivado is not present in this container"
   fail "Vivado is not available in the container (settings64.sh was not found)"
 }
@@ -63,10 +63,10 @@ case "$stage" in
     ;;
 
   display)
-    case "${VCS_DISPLAY_MODE:-none}" in
+    case "${VVD_DISPLAY_MODE:-none}" in
       none) skip "no display requested" ;;
     esac
-    [ -n "${DISPLAY:-}" ] || fail "VCS_DISPLAY_MODE=${VCS_DISPLAY_MODE} but DISPLAY is unset"
+    [ -n "${DISPLAY:-}" ] || fail "VVD_DISPLAY_MODE=${VVD_DISPLAY_MODE} but DISPLAY is unset"
     command -v xdpyinfo >/dev/null 2>&1 || fail "xdpyinfo is missing from the image"
     xdpyinfo >/dev/null 2>&1 || fail "cannot open the X display $DISPLAY"
     log "X display $DISPLAY is usable ($(xdpyinfo | awk '/dimensions:/ {print $2}'))"
@@ -89,7 +89,7 @@ case "$stage" in
     out="$(vivado -version 2>&1 | head -n3)" || fail "vivado -version failed:
 $out"
     printf '%s\n' "$out" >&2
-    want="${VCS_VIVADO_VERSION:-}"
+    want="${VVD_VIVADO_VERSION:-}"
     if [ -n "$want" ] && ! printf '%s' "$out" | grep -q "$want"; then
       fail "expected Vivado $want, but the tool reports:
 $out"
@@ -118,7 +118,7 @@ TCL
 
   identity)
     mkdir -p "/work/$build"
-    probe="/work/$build/.vcs-identity-probe"
+    probe="/work/$build/.vvd-identity-probe"
     printf 'uid=%s gid=%s\n' "$(id -u)" "$(id -g)" >"$probe" ||
       fail "cannot write $probe"
     log "wrote $probe as uid=$(id -u)"
@@ -150,33 +150,33 @@ TCL
     need_vivado
     prepare_smoke
     log "simulating the smoke testbench"
-    VCS_SIM_TOP=tb_smoke \
-    VCS_SIM_SOURCES="$build/selftest/tb_smoke.v $build/selftest/smoke.v" \
-    VCS_SIM_VHDL_SOURCES='' \
-    VCS_SOURCES='' VCS_SV_SOURCES='' VCS_VHDL_SOURCES='' \
-    VCS_SIM_TIME='' VCS_SIM_WAVES=0 \
-    VCS_BUILD_DIR="$build/selftest/out" \
-      /opt/vcs/lib/sim.sh || fail "the smoke simulation failed"
-    grep -q 'vcs-smoke: PASS' "/work/$build/selftest/out/logs/sim.log" ||
+    VVD_SIM_TOP=tb_smoke \
+    VVD_SIM_SOURCES="$build/selftest/tb_smoke.v $build/selftest/smoke.v" \
+    VVD_SIM_VHDL_SOURCES='' \
+    VVD_SOURCES='' VVD_SV_SOURCES='' VVD_VHDL_SOURCES='' \
+    VVD_SIM_TIME='' VVD_SIM_WAVES=0 \
+    VVD_BUILD_DIR="$build/selftest/out" \
+      /opt/vvd/lib/sim.sh || fail "the smoke simulation failed"
+    grep -q 'vvd-smoke: PASS' "/work/$build/selftest/out/logs/sim.log" ||
       fail "the testbench did not report PASS"
     ;;
 
   synth)
     need_vivado
     prepare_smoke
-    part="${VCS_SELFTEST_PART:-${VCS_PART:-xc7a35tcpg236-1}}"
+    part="${VVD_SELFTEST_PART:-${VVD_PART:-xc7a35tcpg236-1}}"
     log "synthesising the smoke design for $part"
-    VCS_TOP=smoke \
-    VCS_PART="$part" \
-    VCS_BOARD_PART='' \
-    VCS_SOURCES="$build/selftest/smoke.v" \
-    VCS_SV_SOURCES='' VCS_VHDL_SOURCES='' VCS_CONSTRAINTS='' VCS_IP='' VCS_BD='' \
-    VCS_XPR='' VCS_FLOW_MODE=nonproject \
-    VCS_PRE_TCL='' VCS_POST_TCL='' \
-    VCS_BUILD_DIR="$build/selftest/out" \
+    VVD_TOP=smoke \
+    VVD_PART="$part" \
+    VVD_BOARD_PART='' \
+    VVD_SOURCES="$build/selftest/smoke.v" \
+    VVD_SV_SOURCES='' VVD_VHDL_SOURCES='' VVD_CONSTRAINTS='' VVD_IP='' VVD_BD='' \
+    VVD_XPR='' VVD_FLOW_MODE=nonproject \
+    VVD_PRE_TCL='' VVD_POST_TCL='' \
+    VVD_BUILD_DIR="$build/selftest/out" \
       vivado -mode batch -nojournal -notrace \
              -log "/work/$build/selftest/out/logs/synth.log" \
-             -source "$VCS_CONTAINER_TCL/flow.tcl" -tclargs synth >&2 ||
+             -source "$VVD_CONTAINER_TCL/flow.tcl" -tclargs synth >&2 ||
       fail "synthesis of the smoke design failed -- most often this is a missing or expired license"
     [ -f "/work/$build/selftest/out/post_synth.dcp" ] ||
       fail "synthesis reported success but produced no checkpoint"
@@ -185,7 +185,7 @@ TCL
 
   jtag)
     need_vivado
-    url="${VCS_HW_SERVER_URL:-}"
+    url="${VVD_HW_SERVER_URL:-}"
     [ -n "$url" ] || skip "JTAG is disabled"
     mkdir -p "$work"
     script="$work/jtag-probe.tcl"

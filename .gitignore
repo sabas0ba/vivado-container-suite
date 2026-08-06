@@ -1,6 +1,6 @@
 # Machine-specific configuration -- never commit a license path or a lab
 # hostname into the shared config.
-vcs.local.conf
+vvd.local.conf
 
 # Pinned development tooling (fetch with: make tools)
 /.tools/
