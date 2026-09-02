@@ -1,3 +1,8 @@
+---
+title: 07 JTAG
+description: host、remote、USBによるJTAG接続とdevice書き込み
+---
+
 # 07 JTAG
 
 ## 3 種類の転送方式

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="{{ site.lang | default: 'ja' }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>{% if page.title %}{{ page.title | escape }} · {% endif %}{{ site.title | escape }}</title>
+    <meta name="description" content="{{ page.description | default: site.description | strip_html | normalize_whitespace | escape }}">
+    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+    <script>
+      try {
+        const theme = localStorage.getItem("vvd-docs-theme");
+        if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+      } catch (_) {}
+    </script>
+    <script defer src="{{ '/assets/js/theme.js' | relative_url }}"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">本文へ移動</a>
+    <header class="site-header">
+      <a class="site-brand" href="{{ '/' | relative_url }}">
+        <span class="brand-mark" aria-hidden="true">vvd</span>
+        <span>{{ site.title }}</span>
+      </a>
+      <div class="header-actions">
+        <a href="{{ site.repository_url }}">GitHub</a>
+        <button class="theme-toggle" type="button" aria-label="表示テーマを切り替える">Theme</button>
+      </div>
+    </header>
+
+    <div class="site-shell">
+      <aside class="sidebar">
+        <nav aria-label="ドキュメント">
+          <p class="nav-label">Documentation</p>
+          <ul>
+            {% for item in site.nav %}
+              <li><a href="{{ item.url | relative_url }}"{% if page.url == item.url %} aria-current="page"{% endif %}>{{ item.title }}</a></li>
+            {% endfor %}
+          </ul>
+        </nav>
+      </aside>
+
+      <main id="main-content" class="doc-content">
+        <details class="mobile-nav">
+          <summary>ドキュメント一覧</summary>
+          <nav aria-label="モバイル用ドキュメント">
+            <ul>
+              {% for item in site.nav %}
+                <li><a href="{{ item.url | relative_url }}"{% if page.url == item.url %} aria-current="page"{% endif %}>{{ item.title }}</a></li>
+              {% endfor %}
+            </ul>
+          </nav>
+        </details>
+
+        <article>
+          {{ content }}
+        </article>
+
+        <footer class="page-footer">
+          <a href="{{ site.repository_url }}/edit/main/docs/{{ page.path }}">このページを編集する</a>
+          <span>MIT License</span>
+        </footer>
+      </main>
+    </div>
+  </body>
+</html>

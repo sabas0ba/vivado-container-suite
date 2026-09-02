@@ -1,3 +1,8 @@
+---
+title: 06 GUI と Tcl
+description: Vivado GUI、Tcl console、headless displayの使用方法
+---
+
 # 06 GUI と Tcl
 
 Tcl コンソールと GUI は、いずれも同一のイメージとマウント構成で動作する。

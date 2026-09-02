@@ -1,3 +1,8 @@
+---
+title: 01 はじめに
+description: vivado-container-suite の導入から最初のシミュレーションとbitstream生成まで
+---
+
 # 01 はじめに
 
 ## 前提

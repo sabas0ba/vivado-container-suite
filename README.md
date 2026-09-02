@@ -2,6 +2,8 @@
 
 AMD Vivado の開発環境をコンテナに閉じ込め、すべての操作を CLI から行うためのツールキット。
 
+[公開ドキュメント](https://sabas0ba.github.io/vivado-container-suite/) / [ドキュメントのソース](docs/index.md)
+
 ```sh
 vvd build            # コンテナイメージを構築
 vvd sim              # 論理シミュレーション (xsim)
@@ -60,6 +62,8 @@ VVD_SIM_SOURCES=sim/*.v
 手順の詳細は [docs/01-getting-started.md](docs/01-getting-started.md) を参照。
 
 ## ドキュメント
+
+ブラウザで参照する場合は [GitHub Pages 版](https://sabas0ba.github.io/vivado-container-suite/) を使用する。
 
 | | |
 |---|---|
