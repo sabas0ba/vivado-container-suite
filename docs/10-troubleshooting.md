@@ -1,3 +1,8 @@
+---
+title: 10 トラブルシューティング
+description: vivado-container-suiteの症状別診断と対処方法
+---
+
 # 10 トラブルシューティング
 
 最初に次のコマンドを実行する。

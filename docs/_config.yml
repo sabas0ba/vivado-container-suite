@@ -1,0 +1,51 @@
+title: vivado-container-suite
+description: AMD Vivado をコンテナ内で再現可能かつ安全に実行するための CLI ツールキット
+lang: ja
+url: https://sabas0ba.github.io
+baseurl: /vivado-container-suite
+repository_url: https://github.com/sabas0ba/vivado-container-suite
+
+markdown: kramdown
+highlighter: rouge
+
+# Keep relative Markdown links valid both on GitHub and in the generated site.
+# This plugin is included in the GitHub Pages build environment.
+plugins:
+  - jekyll-relative-links
+
+relative_links:
+  enabled: true
+  collections: false
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+nav:
+  - title: 概要
+    url: /
+  - title: 01 はじめに
+    url: /01-getting-started.html
+  - title: 02 設定
+    url: /02-configuration.html
+  - title: 03 イメージ構築
+    url: /03-image-build.html
+  - title: 04 ライセンス
+    url: /04-licensing.html
+  - title: 05 フロー
+    url: /05-flows.html
+  - title: 06 GUI と Tcl
+    url: /06-gui-and-tcl.html
+  - title: 07 JTAG
+    url: /07-jtag.html
+  - title: 08 CI
+    url: /08-ci.html
+  - title: 09 ピン留め
+    url: /09-pinning.html
+  - title: 10 トラブルシューティング
+    url: /10-troubleshooting.html
+
+exclude:
+  - README.md

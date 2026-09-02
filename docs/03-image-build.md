@@ -1,3 +1,8 @@
+---
+title: 03 イメージ構築
+description: Vivadoのmount modeとimage mode、container imageの構築方法
+---
+
 # 03 イメージ構築
 
 ## モード

@@ -1,3 +1,8 @@
+---
+title: 02 設定
+description: vvd.confの全設定key、優先順位、CLI flag
+---
+
 # 02 設定
 
 ## 優先順位

@@ -1,3 +1,8 @@
+---
+title: 09 ピン留め
+description: container image、apt、tool、GitHub Actionsの再現可能な固定方法
+---
+
 # 09 ピン留め
 
 方針は、バージョン番号ではなく内容ハッシュで固定することである。タグ、ブランチ、
