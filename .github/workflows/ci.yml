@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -93,8 +93,8 @@ jobs:
   hardware:
     name: hardware-in-the-loop
     # Opt-in: a self-hosted runner labelled `vivado` with a real installation,
-    # a license and a JTAG cable.  Skipped everywhere else.
-    if: ${{ github.repository_owner != '' && vars.VVD_HW_RUNNER == 'true' }}
+    # a license and a JTAG cable.  Runs only when explicitly dispatched.
+    if: ${{ github.event_name == 'workflow_dispatch' && vars.VVD_HW_RUNNER == 'true' }}
     runs-on: [self-hosted, vivado]
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
